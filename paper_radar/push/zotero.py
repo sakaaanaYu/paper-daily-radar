@@ -84,7 +84,18 @@ class ZoteroClient:
         r.raise_for_status()
 
     def _attach_pdf(self, parent_key: str, pdf_url: str) -> None:
-        r = requests.get(pdf_url, timeout=60)
+        # OpenReview 的 PDF 端点有浏览器人机挑战，程序化下载必然 403，直接跳过
+        if "openreview.net" in pdf_url:
+            log.info("OpenReview PDF 有反爬挑战，跳过自动挂载: %s", pdf_url)
+            return
+        r = requests.get(
+            pdf_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+            },
+            timeout=60,
+        )
         r.raise_for_status()
         pdf = r.content
         if not pdf.startswith(b"%PDF"):
