@@ -9,9 +9,10 @@ from .classify import classify_keywords
 from .config import load_config
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
-from .quality import apply_venue_boost, exclude_heuristics, verify_venues
+from .quality import apply_venue_boost, apply_venue_labels, exclude_heuristics, verify_venues
 from .rank import rank_and_filter
 from .sources.arxiv import fetch_arxiv
+from .sources.journals import fetch_journals
 from .sources.openreview import fetch_openreview
 from .store import load_seen, save_seen
 from .summarize import summarize
@@ -30,7 +31,7 @@ def main() -> int:
     seen_list = load_seen(SEEN_PATH)
     seen = set(seen_list)
 
-    # 1. 抓取
+    # 1. 抓取：arXiv 预印本 + OpenReview 顶会 + 顶刊 RSS
     papers = []
     if cfg["arxiv"].get("categories"):
         papers.extend(
@@ -42,6 +43,8 @@ def main() -> int:
                 cfg["openreview"]["venues"], int(cfg["openreview"].get("max_per_venue", 40))
             )
         )
+    if cfg.get("journals"):
+        papers.extend(fetch_journals(cfg["journals"], int(cfg.get("max_per_journal", 20))))
 
     fresh = [p for p in papers if p.source_id not in seen]
     log.info("抓取 %d 篇，其中未见过 %d 篇", len(papers), len(fresh))
@@ -54,9 +57,10 @@ def main() -> int:
         save_seen(SEEN_PATH, seen_list + [p.source_id for p in papers if p.source_id not in seen])
         return 0
 
-    # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权后取 top
+    # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权 + 出处标注后取 top
     verify_venues(candidates)
     apply_venue_boost(candidates)
+    apply_venue_labels(candidates)
     candidates.sort(key=lambda x: (x.score, x.date), reverse=True)
     selected = candidates[: cfg["max_papers_per_day"]]
 

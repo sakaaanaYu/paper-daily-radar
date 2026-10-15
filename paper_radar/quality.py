@@ -15,7 +15,10 @@ S2_FIELDS = "title,venue,publicationVenue,year,citationCount,influentialCitation
 DBLP_API = "https://dblp.org/search/publ/api"
 
 # 顶会/顶刊别名（小写）。venue 字符串里出现任一别名即认定录用。
+# 注意顺序：具体刊名放在宽泛词前面，避免 "Nature Machine Intelligence" 被 "Nature" 抢先命中。
 DEFAULT_TOP_VENUES = {
+    "Nature Machine Intelligence": ["nature machine intelligence", "nat mach intell", "natmachintell"],
+    "Nature Human Behaviour": ["nature human behaviour", "nature human behavior", "nat hum behav"],
     "NeurIPS": ["neurips", "nips", "neural information processing systems"],
     "ICLR": ["iclr", "international conference on learning representations"],
     "ICML": ["icml", "international conference on machine learning"],
@@ -25,17 +28,22 @@ DEFAULT_TOP_VENUES = {
     "EMNLP": ["emnlp", "empirical methods in natural language processing"],
     "NAACL": ["naacl"],
     "COLM": ["colm", "conference on language modeling"],
+    "TMLR": ["tmlr", "transactions on machine learning research"],
+    "JMLR": ["jmlr", "journal of machine learning research"],
     "CVPR": ["cvpr", "computer vision and pattern recognition"],
     "ICCV": ["iccv", "international conference on computer vision"],
     "ECCV": ["eccv"],
     "CHI": ["chi conference", "human factors in computing systems", "acm chi"],
     "UIST": ["uist", "user interface software and technology"],
     "CSCW": ["cscw", "computer supported cooperative work"],
+    "AIES": ["aies", "ai ethics and society"],
+    "FAccT": ["facct", "fairness accountability transparency"],
+    "ICWSM": ["icwsm", "web and social media"],
     "AIED": ["aied", "artificial intelligence in education"],
     "L@S": ["learning at scale", "l@s"],
-    "Nature": ["nature"],
-    "Science": ["science"],
     "PNAS": ["pnas", "proceedings of the national academy"],
+    "Science": ["science"],
+    "Nature": ["nature"],
 }
 
 # 含这些词直接扔：立场文/短文/研讨会摘要不是精读对象
@@ -66,6 +74,10 @@ def verify_venues(papers: list[Paper], top_venues: dict | None = None) -> None:
     """查证录用去向：Semantic Scholar 优先，DBLP 兜底。"""
     aliases = top_venues or DEFAULT_TOP_VENUES
     for p in papers:
+        # 顶刊源：刊名即出处
+        if p.source_id.startswith("journal:"):
+            p.accepted_at = _match_top_venue(p.venue, aliases) or p.venue
+            continue
         # OpenReview 来源本身就是按顶会 venueid 捞的已录用稿
         if p.source_id.startswith("openreview:"):
             p.accepted_at = _match_top_venue(p.venue, aliases) or p.venue.split()[0]
@@ -80,6 +92,25 @@ def apply_venue_boost(papers: list[Paper]) -> None:
     for p in papers:
         if p.accepted_at:
             p.score += 5.0
+
+
+def apply_venue_labels(papers: list[Paper]) -> None:
+    """把出处写清楚：录用到哪就标哪，顶刊标刊名，纯预印本才标 arXiv。"""
+    for p in papers:
+        if p.accepted_at:
+            # 优先展示录用去向（带年份更清楚）
+            year = (p.date or "")[:4]
+            p.venue = f"{p.accepted_at} {year}" if year and year not in p.accepted_at else p.accepted_at
+        elif p.source_id.startswith("journal:"):
+            # 顶刊源：venue 已是期刊名，保留
+            pass
+        elif p.source_id.startswith("openreview:"):
+            # OpenReview 未匹配到顶会别名时，venue 可能是 venueid，清理一下
+            v = p.venue.replace(".cc", "").replace("/Conference", "").replace("/", " ").strip()
+            p.venue = v or "OpenReview"
+        elif p.source_id.startswith("arxiv:"):
+            cat = p.venue.replace("arXiv ", "").strip() if p.venue.startswith("arXiv ") else ""
+            p.venue = f"arXiv preprint ({cat})" if cat else "arXiv preprint"
 
 
 # ---------- Semantic Scholar ----------

@@ -15,9 +15,20 @@ openreview:
   # 注意：CHI 不在 OpenReview（用 PCS 系统）；ACL 走 ACL Rolling Review。
   venues:
     - "ICLR.cc/2026/Conference"      # 可用
+    - "ICML.cc/2026/Conference"
+    - "ICML.cc/2025/Conference"
     - "NeurIPS.cc/2026/Conference"   # 放榜后自动有数据
     - "NeurIPS.cc/2025/Conference"   # 近期已录用
+    - "TMLR"                         # 期刊级，Transactions on ML Research
   max_per_venue: 40
+
+# 顶刊 RSS：不限于 arXiv。靠 seen.json 去重。
+journals:
+  "Nature Machine Intelligence": "https://www.nature.com/natmachintell.rss"
+  "Nature Human Behaviour": "https://www.nature.com/nathumbehav.rss"
+  "Science": "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science"
+  "PNAS": "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas"
+max_per_journal: 20
 
 # 关键词：命中标题权重高，命中摘要权重低。留空则不过滤。
 # 覆盖四个板块的宽口径词，用于拓展视野而非贴合单一课题

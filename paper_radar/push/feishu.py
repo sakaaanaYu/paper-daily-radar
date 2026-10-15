@@ -36,11 +36,14 @@ def send_digest(
         )
         for p in items:
             stars = "⭐" * (p.quality or 3)
-            badge = f"✅ {_safe(p.accepted_at)} · " if p.accepted_at else ""
+            # 出处优先写录用去向/刊名；纯预印本才落回 arXiv
+            venue = _safe(p.venue or p.accepted_at or "")
+            if p.accepted_at and p.accepted_at.lower() not in venue.lower():
+                venue = f"✅ {_safe(p.accepted_at)}"
             takeaway = p.why_read or p.zh_summary or (p.abstract or "")[:100]
             line = (
                 f"**[{_safe(p.title)}]({p.url})**\n"
-                f"{badge}{stars} · {_safe(p.venue)} · {p.date}\n"
+                f"📍 {venue} · {stars} · {p.date}\n"
                 f"{_safe(takeaway)}"
             )
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": line}})

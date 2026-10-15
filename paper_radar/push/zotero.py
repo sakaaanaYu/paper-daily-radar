@@ -210,17 +210,31 @@ def to_item(p: Paper) -> dict:
         "url": p.url,
         "tags": tags,
     }
-    if p.source_id.startswith("arxiv:"):
+    if p.source_id.startswith("journal:"):
+        # 顶刊文章：journalArticle + 期刊名
+        parts = p.source_id.split(":")
+        journal = p.venue or parts[1] if len(parts) > 1 else p.venue
+        return {
+            "itemType": "journalArticle",
+            "publicationTitle": journal,
+            "extra": p.source_id,
+            **base,
+        }
+    if p.source_id.startswith("arxiv:") and not p.accepted_at:
         return {
             "itemType": "preprint",
             "repository": "arXiv",
             "extra": f"arXiv:{p.source_id.split(':', 1)[1]}",
             **base,
         }
+    # OpenReview 或已查证录用 → 按会议论文
+    extra = f"OpenReview:{p.source_id.split(':', 1)[1]}" if p.source_id.startswith("openreview:") else p.source_id
+    if p.accepted_at:
+        extra = f"{extra}\nAccepted: {p.accepted_at}"
     return {
         "itemType": "conferencePaper",
-        "proceedingsTitle": p.venue,
-        "extra": f"OpenReview:{p.source_id.split(':', 1)[1]}",
+        "proceedingsTitle": p.venue or p.accepted_at or "Unknown venue",
+        "extra": extra,
         **base,
     }
 
