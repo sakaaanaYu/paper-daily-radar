@@ -5,6 +5,7 @@ import os
 from datetime import date
 from pathlib import Path
 
+from .classify import classify_keywords
 from .config import load_config
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
@@ -51,14 +52,15 @@ def main() -> int:
         save_seen(SEEN_PATH, seen_list + [p.source_id for p in papers if p.source_id not in seen])
         return 0
 
-    # 3. 加工
-    summarize(selected)
+    # 3. 分类（关键词预分类）+ 加工（LLM 修正分类 + 摘要）
+    classify_keywords(selected, cfg["categories"])
+    summarize(selected, categories=cfg["categories"])
 
     # 4. 推送
     today = date.today().isoformat()
     feishu_url = os.environ.get("FEISHU_WEBHOOK_URL", "")
     if feishu_url:
-        send_digest(feishu_url, selected, today)
+        send_digest(feishu_url, selected, today, categories=cfg["categories"])
     else:
         log.warning("未设置 FEISHU_WEBHOOK_URL，跳过飞书推送")
 

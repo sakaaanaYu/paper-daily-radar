@@ -38,3 +38,82 @@ keywords:
 
 # 每天最多推送/入库的篇数
 max_papers_per_day: 10
+
+# 分类体系：卡片按此分组，关键词预分类 + LLM 修正
+# id 会出现在 LLM 输出里，不要随意改；label 是卡片/Zotero 上显示的名字
+categories:
+  - id: hci
+    label: "🧑‍💻 人机交互与AI素养"
+    keywords:
+      - "human-AI"
+      - "human-AI interaction"
+      - "human computer interaction"
+      - "HCI"
+      - "AI literacy"
+      - "digital literacy"
+      - "AI-assisted"
+      - "user study"
+      - "interaction design"
+      - "trust in AI"
+      - "explainable"
+      - "transparency"
+      - "algorithmic"
+  - id: learning
+    label: "📚 学习与教育"
+    keywords:
+      - "learning"
+      - "education"
+      - "educational"
+      - "teaching"
+      - "student"
+      - "classroom"
+      - "curriculum"
+      - "instruction"
+      - "tutor"
+      - "assessment"
+      - "learning science"
+      - "knowledge construction"
+  - id: media
+    label: "🎬 媒体与多模态"
+    keywords:
+      - "audiovisual"
+      - "audio-visual"
+      - "congruence"
+      - "multimodal"
+      - "video"
+      - "media"
+      - "perception"
+      - "narrative"
+      - "visual"
+      - "audio"
+      - "immersive"
+      - "persuasion"
+  - id: genai
+    label: "🤖 GenAI/LLM 技术"
+    keywords:
+      - "large language model"
+      - "LLM"
+      - "generative"
+      - "GPT"
+      - "foundation model"
+      - "prompt"
+      - "agent"
+      - "instruction tuning"
+      - "RLHF"
+      - "diffusion"
+      - "chatbot"
+      - "language model"
+  - id: cog
+    label: "🧠 认知与心理"
+    keywords:
+      - "cognition"
+      - "cognitive"
+      - "memory"
+      - "emotion"
+      - "attention"
+      - "psychology"
+      - "fluency"
+      - "metacognition"
+      - "motivation"
+      - "decision-making"
+      - "judgment"

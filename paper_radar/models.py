@@ -16,6 +16,7 @@ class Paper:
     venue: str  # "arXiv cs.AI" / "NeurIPS 2026"
     pdf_url: str = ""
     keywords: list[str] = field(default_factory=list)
+    category: str = "other"  # 分类 id，见 config.yaml categories
     score: float = 0.0  # 关键词相关度
     quality: int = 0  # 1-5 质量分（LLM 生成，0=未评）
     zh_summary: str = ""

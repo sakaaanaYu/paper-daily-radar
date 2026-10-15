@@ -9,6 +9,7 @@ DEFAULTS = {
     "arxiv": {"categories": ["cs.HC", "cs.AI", "cs.CL"], "max_results": 80},
     "openreview": {"venues": [], "max_per_venue": 40},
     "keywords": [],
+    "categories": [],
     "max_papers_per_day": 10,
 }
 
@@ -25,5 +26,6 @@ def load_config(path: str | Path | None = None) -> dict:
         "arxiv": arxiv,
         "openreview": openreview,
         "keywords": list(data.get("keywords") or []),
+        "categories": list(data.get("categories") or []),
         "max_papers_per_day": int(data.get("max_papers_per_day") or 10),
     }

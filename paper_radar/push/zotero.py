@@ -191,6 +191,8 @@ class ZoteroClient:
 def to_item(p: Paper) -> dict:
     creators = [to_creator(a) for a in p.authors if a]
     tags = [{"tag": "Paper Radar"}]
+    if p.category and p.category != "other":
+        tags.append({"tag": f"cat:{p.category}"})
     for k in (p.keywords or [])[:6]:
         if k:
             tags.append({"tag": k})

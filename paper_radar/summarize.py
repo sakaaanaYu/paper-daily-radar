@@ -11,13 +11,6 @@ from .models import Paper
 
 log = logging.getLogger(__name__)
 
-SYSTEM = (
-    "你是文献筛选助手。根据论文标题和摘要输出严格 JSON 数组，不要输出任何其他文字。\n"
-    '每个元素形如: {"id": 原id, "score": 1-5整数质量分, '
-    '"zh_summary": "中文摘要2-3句", "why_read": "一句话看点，不超过40字"}\n'
-    "score 标准：5=高度相关且有明显贡献，4=相关且扎实，3=相关，2=边缘相关，1=不相关。"
-)
-
 # 常见服务商的 OpenAI 兼容地址（LLM_BASE_URL 用，也支持任何自建/本地服务）
 PROVIDER_HINTS = """
 # DeepSeek:  https://api.deepseek.com/v1        model=deepseek-chat
@@ -28,17 +21,36 @@ PROVIDER_HINTS = """
 # Ollama:   http://localhost:11434/v1          model=qwen2.5
 """
 
+BASE_SYSTEM = (
+    "你是文献筛选助手。根据论文标题和摘要输出严格 JSON 数组，不要输出任何其他文字。\n"
+    '每个元素形如: {"id": 原id, "score": 1-5整数质量分, "category": 分类id, '
+    '"zh_summary": "中文摘要2-3句", "why_read": "一句话看点，不超过40字"}\n'
+    "score 标准：5=高度相关且有明显贡献，4=相关且扎实，3=相关，2=边缘相关，1=不相关。"
+)
 
-def summarize(papers: list[Paper], batch_size: int = 8) -> list[Paper]:
-    """生成中文摘要和质量分。优先 OpenAI 兼容接口，其次 Claude；都没配就跳过。"""
+
+def summarize(
+    papers: list[Paper],
+    batch_size: int = 8,
+    categories: list[dict] | None = None,
+) -> list[Paper]:
+    """生成中文摘要、质量分、分类修正。
+
+    优先 OpenAI 兼容接口（LLM_API_KEY），其次 Claude（ANTHROPIC_API_KEY）。
+    categories 传入时，LLM 的 category 输出会修正关键词预分类结果。
+    """
     if not papers:
         return papers
-
-    llm_key = os.environ.get("LLM_API_KEY", "")
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not llm_key and not anthropic_key:
+    if not os.environ.get("LLM_API_KEY") and not os.environ.get("ANTHROPIC_API_KEY"):
         log.info("未配置 LLM_API_KEY / ANTHROPIC_API_KEY，跳过摘要")
         return papers
+
+    system = BASE_SYSTEM
+    valid_ids: set[str] | None = None
+    if categories:
+        cat_desc = "、".join(f'{c.get("id")}={c.get("label")}' for c in categories)
+        system += f"\ncategory 只能取这些 id：{cat_desc}，或 other。"
+        valid_ids = {c.get("id") for c in categories} | {"other"}
 
     for i in range(0, len(papers), batch_size):
         batch = papers[i : i + batch_size]
@@ -51,7 +63,7 @@ def summarize(papers: list[Paper], batch_size: int = 8) -> list[Paper]:
         ]
         prompt = "请为以下论文打分并生成中文摘要：\n" + "\n".join(payload)
         try:
-            text = _chat(SYSTEM, prompt)
+            text = _chat(system, prompt)
             items = _parse_json_array(text)
             by_id = {p.source_id: p for p in batch}
             for item in items:
@@ -64,6 +76,10 @@ def summarize(papers: list[Paper], batch_size: int = 8) -> list[Paper]:
                     p.quality = 3
                 p.zh_summary = str(item.get("zh_summary") or "").strip()
                 p.why_read = str(item.get("why_read") or "").strip()
+                # 混合分类：LLM 修正关键词预分类（仅接受合法 id）
+                cat = str(item.get("category") or "").strip().lower()
+                if cat and (valid_ids is None or cat in valid_ids):
+                    p.category = cat
         except Exception as e:
             log.warning("摘要批次 %d 失败: %s", i // batch_size, e)
     return papers

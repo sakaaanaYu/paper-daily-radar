@@ -4,28 +4,45 @@ import logging
 
 import requests
 
+from ..classify import group_by_category
 from ..models import Paper
 
 log = logging.getLogger(__name__)
 
 
-def send_digest(webhook_url: str, papers: list[Paper], date_str: str) -> bool:
-    """发飞书群机器人日报卡片。没有配置 webhook 或无论文则跳过。"""
+def send_digest(
+    webhook_url: str,
+    papers: list[Paper],
+    date_str: str,
+    categories: list[dict] | None = None,
+) -> bool:
+    """发飞书群机器人日报卡片，按分类分组。"""
     if not webhook_url or not papers:
         return False
 
-    elements = []
-    for i, p in enumerate(papers):
-        stars = "⭐" * (p.quality or 3)
-        takeaway = p.why_read or p.zh_summary or (p.abstract or "")[:100]
-        line = (
-            f"**[{_safe(p.title)}]({p.url})**\n"
-            f"{stars} · {_safe(p.venue)} · {p.date}\n"
-            f"{_safe(takeaway)}"
-        )
-        elements.append({"tag": "div", "text": {"tag": "lark_md", "content": line}})
-        if i < len(papers) - 1:
+    groups = group_by_category(papers, categories or [])
+    elements: list[dict] = []
+    for gi, (label, items) in enumerate(groups):
+        if gi > 0:
             elements.append({"tag": "hr"})
+        elements.append(
+            {
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": f"**{label}** （{len(items)} 篇）",
+                },
+            }
+        )
+        for p in items:
+            stars = "⭐" * (p.quality or 3)
+            takeaway = p.why_read or p.zh_summary or (p.abstract or "")[:100]
+            line = (
+                f"**[{_safe(p.title)}]({p.url})**\n"
+                f"{stars} · {_safe(p.venue)} · {p.date}\n"
+                f"{_safe(takeaway)}"
+            )
+            elements.append({"tag": "div", "text": {"tag": "lark_md", "content": line}})
 
     payload = {
         "msg_type": "interactive",
@@ -49,7 +66,7 @@ def send_digest(webhook_url: str, papers: list[Paper], date_str: str) -> bool:
         if data.get("code") not in (0, None):
             log.error("飞书返回错误: %s", data)
             return False
-        log.info("飞书日报已发送: %d 篇", len(papers))
+        log.info("飞书日报已发送: %d 篇 / %d 个分类", len(papers), len(groups))
         return True
     except Exception as e:
         log.error("飞书发送失败: %s", e)
