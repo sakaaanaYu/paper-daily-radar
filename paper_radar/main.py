@@ -63,6 +63,8 @@ def main() -> int:
     apply_venue_labels(candidates)
     candidates.sort(key=lambda x: (x.score, x.date), reverse=True)
     selected = candidates[: cfg["max_papers_per_day"]]
+    for p in selected:
+        log.info("入选: [%s] %s", p.venue, p.title[:50])
 
     # 4. 分类（关键词预分类）+ 加工（LLM 修正分类 + 摘要）
     classify_keywords(selected, cfg["categories"])

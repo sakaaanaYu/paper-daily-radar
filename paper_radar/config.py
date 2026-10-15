@@ -8,6 +8,8 @@ import yaml
 DEFAULTS = {
     "arxiv": {"categories": ["cs.HC", "cs.AI", "cs.CL"], "max_results": 80},
     "openreview": {"venues": [], "max_per_venue": 40},
+    "journals": {},
+    "max_per_journal": 20,
     "keywords": [],
     "categories": [],
     "max_papers_per_day": 10,
@@ -25,6 +27,8 @@ def load_config(path: str | Path | None = None) -> dict:
     return {
         "arxiv": arxiv,
         "openreview": openreview,
+        "journals": dict(data.get("journals") or {}),
+        "max_per_journal": int(data.get("max_per_journal") or 20),
         "keywords": list(data.get("keywords") or []),
         "categories": list(data.get("categories") or []),
         "max_papers_per_day": int(data.get("max_papers_per_day") or 10),
