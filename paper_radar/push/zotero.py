@@ -49,6 +49,7 @@ class ZoteroClient:
         if body.get("failed"):
             log.warning("Zotero 部分条目失败: %s", body["failed"])
 
+        quota_exhausted = False
         for idx_str, meta in (body.get("successful") or {}).items():
             idx = int(idx_str)
             if idx >= len(papers):
@@ -58,9 +59,11 @@ class ZoteroClient:
                 self._add_note(key, p)
             except Exception as e:
                 log.warning("笔记写入失败 [%s]: %s", p.title[:40], e)
-            if p.pdf_url:
+            if p.pdf_url and not quota_exhausted:
                 try:
-                    self._attach_pdf(key, p.pdf_url)
+                    result = self._attach_pdf(key, p.pdf_url)
+                    if result == "quota":
+                        quota_exhausted = True
                 except Exception as e:
                     log.warning("PDF 挂载失败 [%s]: %s", p.title[:40], e)
 
@@ -83,11 +86,12 @@ class ZoteroClient:
         r = requests.post(self._items_url(), headers=self._headers(), json=[note], timeout=30)
         r.raise_for_status()
 
-    def _attach_pdf(self, parent_key: str, pdf_url: str) -> None:
+    def _attach_pdf(self, parent_key: str, pdf_url: str) -> str:
+        """返回 'ok' / 'skip' / 'quota'。"""
         # OpenReview 的 PDF 端点有浏览器人机挑战，程序化下载必然 403，直接跳过
         if "openreview.net" in pdf_url:
             log.info("OpenReview PDF 有反爬挑战，跳过自动挂载: %s", pdf_url)
-            return
+            return "skip"
         r = requests.get(
             pdf_url,
             headers={
@@ -100,7 +104,7 @@ class ZoteroClient:
         pdf = r.content
         if not pdf.startswith(b"%PDF"):
             log.warning("非 PDF 内容，跳过: %s", pdf_url)
-            return
+            return "skip"
 
         att = {
             "itemType": "attachment",
@@ -115,20 +119,48 @@ class ZoteroClient:
         successful = (r.json().get("successful") or {})
         if not successful:
             log.warning("附件条目创建失败: %s", r.text[:200])
-            return
+            return "skip"
         att_key = next(iter(successful.values()))["key"]
-        self._upload_file(att_key, pdf)
+        status = self._upload_file(att_key, pdf)
+        if status == "quota":
+            # 配额满时删掉空附件，避免留下孤儿条目
+            self._delete_item(att_key)
+        return status
 
-    def _upload_file(self, att_key: str, data: bytes) -> None:
-        """Zotero 文件上传三步：授权 → 传 S3 → 确认。失败不致命（条目仍有 URL）。"""
-        r = requests.get(
+    def _delete_item(self, item_key: str) -> None:
+        try:
+            requests.delete(f"{self._items_url()}/{item_key}", headers=self._headers(), timeout=30)
+        except Exception as e:
+            log.warning("清理空附件失败 %s: %s", item_key, e)
+
+    def _upload_file(self, att_key: str, data: bytes) -> str:
+        """Zotero 文件上传三步：POST 授权 → 传 S3 → 确认。"""
+        import hashlib
+        import time
+
+        md5 = hashlib.md5(data).hexdigest()
+        r = requests.post(
             f"{self._items_url()}/{att_key}/file",
-            headers={**self._headers(), "If-None-Match": "*"},
+            headers={
+                **self._headers(),
+                "If-None-Match": "*",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data={
+                "md5": md5,
+                "filename": "fulltext.pdf",
+                "filesize": str(len(data)),
+                "mtime": str(int(time.time() * 1000)),
+            },
             timeout=30,
         )
         if r.status_code != 200:
-            log.warning("上传授权失败 %s: %s", r.status_code, r.text[:200])
-            return
+            msg = r.text[:200]
+            if r.status_code == 413 or "quota" in msg.lower():
+                log.warning("Zotero 存储空间不足，PDF 跳过（条目已入库）。可清理 <https://www.zotero.org/settings/storage> 或升级 Zotero Storage")
+                return "quota"
+            log.warning("上传授权失败 %s: %s", r.status_code, msg)
+            return "skip"
         info = r.json()
 
         form = dict(info.get("params") or {})
@@ -142,7 +174,7 @@ class ZoteroClient:
         )
         if up.status_code not in (200, 201, 204):
             log.warning("文件上传失败 %s: %s", up.status_code, up.text[:200])
-            return
+            return "skip"
 
         token = info.get("uploadKey") or (up.headers.get("ETag") or "").strip('"')
         fin = requests.post(
@@ -152,6 +184,8 @@ class ZoteroClient:
         )
         if fin.status_code not in (200, 204):
             log.warning("上传确认失败 %s: %s", fin.status_code, fin.text[:200])
+            return "skip"
+        return "ok"
 
 
 def to_item(p: Paper) -> dict:

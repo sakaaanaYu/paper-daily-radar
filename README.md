@@ -89,6 +89,6 @@ paper_radar/
 |---|---|
 | 飞书没收到 | Actions 日志找「飞书发送失败」；webhook 是否过期/机器人被移出群 |
 | Zotero 没入库 | 日志找「Zotero 写入失败」；key 是否含 library:write |
-| PDF 有条目没文件 | OpenReview 的 PDF 有反爬挑战，**只能手动下**（浏览器打开条目链接下载后拖进 Zotero）；arXiv 的会自动挂载。另：没配文件同步时附件只在本机 |
+| PDF 有条目没文件 | 两个原因：① OpenReview 的 PDF 有反爬挑战，程序下不了，需浏览器打开条目链接手动下载；② **Zotero 免费存储只有 300MB**，满了会跳过上传（日志会提示），可清理 <https://www.zotero.org/settings/storage> 或升级 Zotero Storage |
 | 一直推同一篇 | `data/seen.json` 有没有正常回写（Actions 权限需 contents: write） |
 | 今日无新增 | 正常；或调大 `max_results` / 放宽 keywords |
