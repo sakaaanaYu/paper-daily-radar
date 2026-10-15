@@ -190,7 +190,7 @@ class ZoteroClient:
 
 
 def to_item(p: Paper) -> dict:
-    creators = [to_creator(a) for a in p.authors if a]
+    creators = [to_creator(a) for a in (p.authors or [])[:25] if a]
     tags = [{"tag": "Paper Radar"}]
     if p.accepted_at:
         tags.append({"tag": f"accepted:{p.accepted_at.lower()}"})
@@ -239,17 +239,39 @@ def to_item(p: Paper) -> dict:
     }
 
 
+MAX_CREATOR_LEN = 100  # Zotero 同步对 creator name 有长度限制
+_INSTITUTION_RE = re.compile(
+    r"\b(university|institute|department|division|school|college|laboratory|lab\b|"
+    r"center|centre|hospital|clinic|consortium|collaboration|team|group|academy|"
+    r"program|faculty|medical|research)\b",
+    re.I,
+)
+
+
 def to_creator(name: str) -> dict:
-    """Zotero 作者格式：单名/机构名用 name 字段，其余拆 firstName/lastName。"""
-    name = name.strip()
+    """Zotero 作者格式：单名/机构名用 name 字段，其余拆 firstName/lastName。
+
+    机构名和过长名截断后走 name 字段，避免 400/413。
+    """
+    name = (name or "").strip()
+    if not name:
+        return {"creatorType": "author", "name": "?"}
+    if len(name) > MAX_CREATOR_LEN:
+        name = name[: MAX_CREATOR_LEN - 1] + "…"
+
+    # 机构 / 合作组 / 看起来像单位的长名 → name 字段
+    if _INSTITUTION_RE.search(name) or ("," in name and len(name) > 40):
+        return {"creatorType": "author", "name": name}
+
     if "," in name:
         last, first = [x.strip() for x in name.split(",", 1)]
-        return {"creatorType": "author", "firstName": first, "lastName": last}
+        last, first = last[:MAX_CREATOR_LEN], first[:MAX_CREATOR_LEN]
+        return {"creatorType": "author", "firstName": first or " ", "lastName": last}
     parts = name.split()
-    # 单词名（如机构、缩写）Zotero 要求走 name 字段
     if len(parts) == 1:
         return {"creatorType": "author", "name": name}
-    # 含 Collaboration / Consortium / Team 等词的合作组也走 name
-    if re.search(r"\b(collaboration|consortium|team|group|university|institute)\b", name, re.I):
-        return {"creatorType": "author", "name": name}
-    return {"creatorType": "author", "firstName": " ".join(parts[:-1]), "lastName": parts[-1]}
+    return {
+        "creatorType": "author",
+        "firstName": " ".join(parts[:-1])[:MAX_CREATOR_LEN],
+        "lastName": parts[-1][:MAX_CREATOR_LEN],
+    }
