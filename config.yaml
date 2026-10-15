@@ -1,12 +1,13 @@
 # Paper Radar 配置 —— 按你的研究兴趣改 keywords 和 venues
 
 arxiv:
-  # 关注的 arXiv 分类
+  # 关注的 arXiv 分类（AI 顶会主粮 + 可信/HCI）
   categories:
-    - cs.HC    # 人机交互
     - cs.AI    # 人工智能
-    - cs.CL    # 计算语言学
-    - cs.CY    # 计算与社会
+    - cs.LG    # 机器学习
+    - cs.CL    # 计算语言学（LLM/智能体）
+    - cs.HC    # 人机交互
+    - cs.CR    # 密码学与安全（可信AI/隐私侧）
   max_results: 80
 
 openreview:
@@ -19,22 +20,60 @@ openreview:
   max_per_venue: 40
 
 # 关键词：命中标题权重高，命中摘要权重低。留空则不过滤。
+# 覆盖四个板块的宽口径词，用于拓展视野而非贴合单一课题
 keywords:
-  - "generative AI"
-  - "GenAI"
+  # 可信人工智能
+  - "trustworthy"
+  - "fairness"
+  - "fair "
+  - "bias"
+  - "privacy"
+  - "interpretability"
+  - "explainable"
+  - "transparency"
+  - "accountability"
+  - "safety"
+  - "alignment"
+  - "robustness"
+  - "adversarial"
+  - "governance"
+  - "ethics"
+  # 人机交互
+  - "human-AI"
+  - "human computer interaction"
+  - "HCI"
+  - "user study"
+  - "interaction"
+  - "interface"
+  - "usability"
+  - "human-centered"
+  - "collaboration"
+  - "mixed-initiative"
+  # 语言模型与智能体
   - "large language model"
   - "LLM"
-  - "AI literacy"
-  - "digital literacy"
-  - "human-AI interaction"
-  - "prompt engineering"
-  - "AI-assisted"
-  - "learning"
-  - "education"
-  - "trust in AI"
-  - "multimodal"
-  - "audiovisual"
-  - "media psychology"
+  - "language model"
+  - "foundation model"
+  - "agent"
+  - "GPT"
+  - "transformer"
+  - "prompt"
+  - "reasoning"
+  - "instruction"
+  - "retrieval"
+  # AI4S 应用与科学
+  - "scientific"
+  - "science"
+  - "chemistry"
+  - "physics"
+  - "biology"
+  - "drug discovery"
+  - "materials"
+  - "health"
+  - "medical"
+  - "climate"
+  - "robotics"
+  - "application"
 
 # 每天最多推送/入库的篇数
 max_papers_per_day: 10
@@ -42,78 +81,94 @@ max_papers_per_day: 10
 # 分类体系：卡片按此分组，关键词预分类 + LLM 修正
 # id 会出现在 LLM 输出里，不要随意改；label 是卡片/Zotero 上显示的名字
 categories:
-  - id: hci
-    label: "🧑‍💻 人机交互与AI素养"
+  - id: trust
+    label: "⚖️ 可信人工智能"
     keywords:
-      - "human-AI"
-      - "human-AI interaction"
-      - "human computer interaction"
-      - "HCI"
-      - "AI literacy"
-      - "digital literacy"
-      - "AI-assisted"
-      - "user study"
-      - "interaction design"
-      - "trust in AI"
+      - "trustworthy"
+      - "trust"
+      - "fairness"
+      - "fair"
+      - "bias"
+      - "privacy"
+      - "differential privacy"
+      - "interpretability"
+      - "interpretable"
       - "explainable"
       - "transparency"
-      - "algorithmic"
-  - id: learning
-    label: "📚 学习与教育"
+      - "accountability"
+      - "safety"
+      - "alignment"
+      - "robustness"
+      - "adversarial"
+      - "certified"
+      - "audit"
+      - "governance"
+      - "ethics"
+      - "responsible"
+      - "security"
+      - "jailbreak"
+  - id: hci
+    label: "🧑‍💻 人机交互"
     keywords:
-      - "learning"
-      - "education"
-      - "educational"
-      - "teaching"
-      - "student"
-      - "classroom"
-      - "curriculum"
-      - "instruction"
-      - "tutor"
-      - "assessment"
-      - "learning science"
-      - "knowledge construction"
-  - id: media
-    label: "🎬 媒体与多模态"
-    keywords:
-      - "audiovisual"
-      - "audio-visual"
-      - "congruence"
-      - "multimodal"
-      - "video"
-      - "media"
-      - "perception"
-      - "narrative"
-      - "visual"
-      - "audio"
-      - "immersive"
-      - "persuasion"
-  - id: genai
-    label: "🤖 GenAI/LLM 技术"
+      - "human-AI"
+      - "human AI"
+      - "human computer interaction"
+      - "human-computer interaction"
+      - "HCI"
+      - "user study"
+      - "user interface"
+      - "interaction design"
+      - "usability"
+      - "human-centered"
+      - "human-in-the-loop"
+      - "collaboration"
+      - "mixed-initiative"
+      - "cscw"
+      - "participatory"
+      - "accessibility"
+      - "user experience"
+      - "crowdsourcing"
+  - id: llm
+    label: "🗣 语言模型与智能体"
     keywords:
       - "large language model"
+      - "large language models"
       - "LLM"
-      - "generative"
-      - "GPT"
+      - "language model"
       - "foundation model"
-      - "prompt"
       - "agent"
+      - "multi-agent"
+      - "GPT"
+      - "transformer"
+      - "prompt"
+      - "in-context"
       - "instruction tuning"
       - "RLHF"
-      - "diffusion"
+      - "reasoning"
+      - "chain-of-thought"
+      - "tool use"
+      - "retrieval-augmented"
+      - "RAG"
       - "chatbot"
-      - "language model"
-  - id: cog
-    label: "🧠 认知与心理"
+      - "dialog"
+  - id: ai4s
+    label: "🔬 AI4S应用与科学"
     keywords:
-      - "cognition"
-      - "cognitive"
-      - "memory"
-      - "emotion"
-      - "attention"
-      - "psychology"
-      - "fluency"
-      - "metacognition"
-      - "motivation"
-      - "decision-making"
-      - "judgment"
+      - "scientific"
+      - "science"
+      - "AI for science"
+      - "chemistry"
+      - "molecule"
+      - "drug discovery"
+      - "physics"
+      - "biology"
+      - "protein"
+      - "materials"
+      - "climate"
+      - "health"
+      - "medical"
+      - "clinical"
+      - "robotics"
+      - "simulation"
+      - "discovery"
+      - "application"
