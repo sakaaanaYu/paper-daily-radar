@@ -35,9 +35,28 @@ arXiv + OpenReview ──→ 关键词筛选 ──→ Claude 中文摘要/打�
 | `FEISHU_WEBHOOK_URL` | ✅ | 飞书机器人 webhook |
 | `ZOTERO_API_KEY` | ✅ | 上一步生成的 key |
 | `ZOTERO_USER_ID` | 可选 | 不填自动解析 |
-| `ANTHROPIC_API_KEY` | 可选 | 有则生成中文摘要+质量分 |
+| `LLM_API_KEY` | 可选* | 摘要模型 key（DeepSeek/Kimi/通义/智谱…任选） |
+| `ANTHROPIC_API_KEY` | 可选* | 用 Claude 则填这个 |
 
-可选变量 `CLAUDE_MODEL`（Settings → Variables），默认 `claude-sonnet-5-5`。
+\* 两个都不填也能跑，但就没有 TL;DR 和质量打分——**建议至少配一个**。
+
+配套 **Variables**（Settings → Variables）：
+
+| Variable | 示例 | 说明 |
+|---|---|---|
+| `LLM_BASE_URL` | `https://api.deepseek.com/v1` | 服务商兼容地址 |
+| `LLM_MODEL` | `deepseek-chat` | 模型名 |
+
+常见服务商（都是 OpenAI 兼容，改上面两个变量即可切换）：
+
+| 服务商 | LLM_BASE_URL | LLM_MODEL |
+|---|---|---|
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| Kimi | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4-flash` |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| 本地 Ollama | `http://localhost:11434/v1` | `qwen2.5` |
 
 ### 4. 首次运行
 
