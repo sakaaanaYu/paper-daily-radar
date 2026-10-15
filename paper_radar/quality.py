@@ -58,11 +58,15 @@ MIN_ABSTRACT_CHARS = 150
 
 
 def exclude_heuristics(papers: list[Paper]) -> list[Paper]:
-    """排除式启发：摘要过短、position paper / workshop 文直接扔。"""
+    """排除式启发：摘要过短、position paper / workshop 文直接扔。
+
+    顶刊源（journal:）即便摘要缺失也保留（RSS 有时只给引文串，标题是可信的）。
+    """
     kept: list[Paper] = []
     for p in papers:
         text = f"{p.title} {p.abstract}"
-        if len(p.abstract or "") < MIN_ABSTRACT_CHARS:
+        is_journal = p.source_id.startswith("journal:")
+        if len(p.abstract or "") < MIN_ABSTRACT_CHARS and not is_journal:
             log.info("排除（摘要过短）: %s", p.title[:50])
             continue
         if EXCLUDE_PATTERNS.search(text):

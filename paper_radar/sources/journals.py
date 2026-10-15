@@ -12,6 +12,13 @@ from ..models import Paper
 log = logging.getLogger(__name__)
 
 UA = "paper-radar/1.0 (research digest)"
+OPENALEX = "https://api.openalex.org/works/doi:{doi}"
+
+# ACM 的 RSS 摘要只是引文串（"Volume 33, Issue 5, Page 1-36, ..."），不是真摘要
+_CITATION_STUB = re.compile(
+    r"^(volume\s+\d+|.*volume\s+\d+,\s*issue\s+\d+,\s*page\s+\d+)",
+    re.I,
+)
 
 # 顶刊 RSS。entry 是"当期/最新"，不是"每日新增"，靠 seen.json 去重。
 # journal id 用于 source_id 和出处展示。
@@ -66,13 +73,20 @@ def _to_paper(e, journal: str) -> Paper | None:
             doi = term
             break
     if not doi:
-        m = re.search(r"(10\.\d{4,9}/[^\s\"'<>]+)", link)
+        m = re.search(r"(10\.\d{4,9}/[^\s\"'<>?]+)", link)
         if m:
             doi = m.group(1)
+    doi = doi.split("?")[0].strip()
     raw_id = doi or link.rstrip("/").split("/")[-1]
     source_id = f"journal:{_slug(journal)}:{raw_id}"
 
     abstract = _strip_html(e.get("summary", e.get("description", "")) or "")
+    # ACM RSS 只给引文串，去 OpenAlex 补真摘要
+    if not abstract or len(abstract) < 150 or _CITATION_STUB.search(abstract):
+        enriched = _abstract_from_openalex(doi) if doi else ""
+        if enriched:
+            abstract = enriched
+
     authors = []
     for a in e.get("authors") or []:
         if isinstance(a, dict):
@@ -102,6 +116,31 @@ def _to_paper(e, journal: str) -> Paper | None:
         venue=journal,  # 出处直接标期刊名
         pdf_url=pdf,
     )
+
+
+def _abstract_from_openalex(doi: str) -> str:
+    """OpenAlex 有完整 abstract_inverted_index，用来补 ACM RSS 缺失的摘要。"""
+    if not doi:
+        return ""
+    try:
+        r = requests.get(
+            OPENALEX.format(doi=doi),
+            headers={"User-Agent": UA},
+            timeout=20,
+        )
+        if r.status_code != 200:
+            return ""
+        inv = (r.json() or {}).get("abstract_inverted_index") or {}
+    except Exception as e:
+        log.debug("OpenAlex 摘要补全失败 %s: %s", doi, e)
+        return ""
+    if not inv:
+        return ""
+    pos: dict[int, str] = {}
+    for word, idxs in inv.items():
+        for i in idxs:
+            pos[i] = word
+    return " ".join(pos[i] for i in sorted(pos))
 
 
 def _strip_html(text: str) -> str:
