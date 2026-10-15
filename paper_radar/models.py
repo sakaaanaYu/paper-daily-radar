@@ -21,3 +21,5 @@ class Paper:
     quality: int = 0  # 1-5 质量分（LLM 生成，0=未评）
     zh_summary: str = ""
     why_read: str = ""
+    accepted_at: str = ""  # 录用查证结果，如 "NeurIPS"（空=未查到录用）
+    citations: int = 0  # Semantic Scholar 引用数

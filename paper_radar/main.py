@@ -9,6 +9,7 @@ from .classify import classify_keywords
 from .config import load_config
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
+from .quality import apply_venue_boost, exclude_heuristics, verify_venues
 from .rank import rank_and_filter
 from .sources.arxiv import fetch_arxiv
 from .sources.openreview import fetch_openreview
@@ -45,18 +46,25 @@ def main() -> int:
     fresh = [p for p in papers if p.source_id not in seen]
     log.info("抓取 %d 篇，其中未见过 %d 篇", len(papers), len(fresh))
 
-    # 2. 筛选
-    selected = rank_and_filter(fresh, cfg["keywords"], cfg["max_papers_per_day"])
-    if not selected:
+    # 2. 排除启发 + 关键词初筛（先拿到候选池，再做质量加权）
+    cleaned = exclude_heuristics(fresh)
+    candidates = rank_and_filter(cleaned, cfg["keywords"], limit=max(len(cleaned), 1))
+    if not candidates:
         log.info("今日无新增匹配论文")
         save_seen(SEEN_PATH, seen_list + [p.source_id for p in papers if p.source_id not in seen])
         return 0
 
-    # 3. 分类（关键词预分类）+ 加工（LLM 修正分类 + 摘要）
+    # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权后取 top
+    verify_venues(candidates)
+    apply_venue_boost(candidates)
+    candidates.sort(key=lambda x: (x.score, x.date), reverse=True)
+    selected = candidates[: cfg["max_papers_per_day"]]
+
+    # 4. 分类（关键词预分类）+ 加工（LLM 修正分类 + 摘要）
     classify_keywords(selected, cfg["categories"])
     summarize(selected, categories=cfg["categories"])
 
-    # 4. 推送
+    # 5. 推送
     today = date.today().isoformat()
     feishu_url = os.environ.get("FEISHU_WEBHOOK_URL", "")
     if feishu_url:
