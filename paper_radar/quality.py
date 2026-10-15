@@ -33,6 +33,8 @@ DEFAULT_TOP_VENUES = {
     "CVPR": ["cvpr", "computer vision and pattern recognition"],
     "ICCV": ["iccv", "international conference on computer vision"],
     "ECCV": ["eccv"],
+    "ACM TOCHI": ["tochi", "transactions on computer-human interaction"],
+    "PACM HCI": ["pacm hci", "proceedings of the acm on human-computer interaction", "pacmhci"],
     "CHI": ["chi conference", "human factors in computing systems", "acm chi"],
     "UIST": ["uist", "user interface software and technology"],
     "CSCW": ["cscw", "computer supported cooperative work"],

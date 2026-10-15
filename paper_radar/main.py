@@ -5,7 +5,7 @@ import os
 from datetime import date
 from pathlib import Path
 
-from .classify import classify_keywords
+from .classify import select_with_quota
 from .config import load_config
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
@@ -57,17 +57,22 @@ def main() -> int:
         save_seen(SEEN_PATH, seen_list + [p.source_id for p in papers if p.source_id not in seen])
         return 0
 
-    # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权 + 出处标注后取 top
+    # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权 + 出处标注
     verify_venues(candidates)
     apply_venue_boost(candidates)
     apply_venue_labels(candidates)
-    candidates.sort(key=lambda x: (x.score, x.date), reverse=True)
-    selected = candidates[: cfg["max_papers_per_day"]]
-    for p in selected:
-        log.info("入选: [%s] %s", p.venue, p.title[:50])
 
-    # 4. 分类（关键词预分类）+ 加工（LLM 修正分类 + 摘要）
-    classify_keywords(selected, cfg["categories"])
+    # 4. 分类保底取 top（每类至少 per_cat_min 篇，再按分数补满）
+    selected = select_with_quota(
+        candidates,
+        cfg["categories"],
+        limit=int(cfg["max_papers_per_day"]),
+        per_cat_min=int(cfg.get("per_cat_min", 2)),
+    )
+    for p in selected:
+        log.info("入选: [%s][%s] %s", p.category, p.venue, p.title[:50])
+
+    # 5. LLM 加工（质量分 + 中文摘要 + 分类修正）
     summarize(selected, categories=cfg["categories"])
 
     # 5. 推送

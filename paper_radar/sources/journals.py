@@ -20,6 +20,9 @@ JOURNAL_FEEDS = {
     "Nature Human Behaviour": "https://www.nature.com/nathumbehav.rss",
     "Science": "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science",
     "PNAS": "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas",
+    # HCI 顶会/顶刊：CHI/UIST 走 ACM，不在 OpenReview
+    "ACM TOCHI": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=tochi",
+    "PACM HCI (CSCW/IUI)": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=pacmhci",
 }
 
 

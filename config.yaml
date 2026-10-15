@@ -28,7 +28,12 @@ journals:
   "Nature Human Behaviour": "https://www.nature.com/nathumbehav.rss"
   "Science": "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science"
   "PNAS": "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas"
+  "ACM TOCHI": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=tochi"
+  "PACM HCI (CSCW/IUI)": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=pacmhci"
 max_per_journal: 20
+
+# 分类保底：每天每类至少几篇，剩余名额按分数补满（防止某类吃满）
+per_cat_min: 2
 
 # 关键词：命中标题权重高，命中摘要权重低。留空则不过滤。
 # 覆盖四个板块的宽口径词，用于拓展视野而非贴合单一课题

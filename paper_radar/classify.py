@@ -25,6 +25,52 @@ def classify_keywords(papers: list[Paper], categories: list[dict]) -> None:
         p.category = best_id
 
 
+def select_with_quota(
+    papers: list[Paper],
+    categories: list[dict],
+    limit: int,
+    per_cat_min: int = 2,
+) -> list[Paper]:
+    """分类保底 + 按分数补满。
+
+    先给每个类保底 per_cat_min 篇（该类内部按分数取），再全局按分数把剩余名额填满，
+    避免某一类（比如顶刊扎堆的 llm）把当天 10 篇全吃掉。
+    """
+    if not papers:
+        return []
+    if not categories:
+        return sorted(papers, key=lambda x: (x.score, x.date), reverse=True)[:limit]
+
+    classify_keywords(papers, categories)
+    by_cat: dict[str, list[Paper]] = {}
+    for p in papers:
+        by_cat.setdefault(p.category, []).append(p)
+
+    def _rank(items: list[Paper]) -> list[Paper]:
+        return sorted(items, key=lambda x: (x.score, x.date), reverse=True)
+
+    selected: list[Paper] = []
+    used: set[str] = set()
+
+    # 1) 每类保底
+    for cat in categories:
+        for p in _rank(by_cat.get(cat.get("id"), []))[:per_cat_min]:
+            if len(selected) >= limit:
+                break
+            if p.source_id not in used:
+                selected.append(p)
+                used.add(p.source_id)
+
+    # 2) 全局按分数补满（含 other）
+    for p in _rank(papers):
+        if len(selected) >= limit:
+            break
+        if p.source_id not in used:
+            selected.append(p)
+            used.add(p.source_id)
+    return selected
+
+
 def category_label(categories: list[dict], cat_id: str) -> str:
     for cat in categories:
         if cat.get("id") == cat_id:
