@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import logging
+import re
 
 import requests
 
@@ -225,11 +226,16 @@ def to_item(p: Paper) -> dict:
 
 
 def to_creator(name: str) -> dict:
+    """Zotero 作者格式：单名/机构名用 name 字段，其余拆 firstName/lastName。"""
     name = name.strip()
     if "," in name:
         last, first = [x.strip() for x in name.split(",", 1)]
         return {"creatorType": "author", "firstName": first, "lastName": last}
     parts = name.split()
+    # 单词名（如机构、缩写）Zotero 要求走 name 字段
     if len(parts) == 1:
-        return {"creatorType": "author", "lastName": parts[0]}
+        return {"creatorType": "author", "name": name}
+    # 含 Collaboration / Consortium / Team 等词的合作组也走 name
+    if re.search(r"\b(collaboration|consortium|team|group|university|institute)\b", name, re.I):
+        return {"creatorType": "author", "name": name}
     return {"creatorType": "author", "firstName": " ".join(parts[:-1]), "lastName": parts[-1]}

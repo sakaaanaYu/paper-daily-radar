@@ -13,6 +13,16 @@
 - [x] Zotero 条目打 cat:* 标签
 - [ ] 用户配置 LLM key 后验证 LLM 修正效果
 
-## 3. 论文质量保障（讨论）
-- [ ] arXiv 良莠不齐的应对策略
-- [ ] 定出可落地的质量门槛
+## 3. 论文质量保障
+- [x] 排除式启发：摘要过短 / position paper / workshop 文直接扔
+- [x] 录用查证：Semantic Scholar 批量查询 + DBLP 兜底
+- [x] OpenReview 来源按 venueid 直接认定录用
+- [x] 顶会顶刊别名表（NeurIPS/ICLR/ICML/ACL/CHI/…）
+- [x] 顶会录用加权 +5（保持视野：只升序不淘汰）
+- [x] CI 跑通：256 抓取 / 10 篇入选 / 飞书分组卡片 / Zotero 入库
+
+## 待办
+- [ ] 用户配置 LLM key（任选 DeepSeek/Kimi/Qwen/GLM/OpenAI/Ollama）
+- [ ] （可选）清理 Zotero 存储 304MB/300MB 后恢复 PDF 自动挂载
+- [ ] （可选）删除 Zotero 里残留的 test.pdf 空附件
+- [ ] （二期）Zotero 标签反馈回路，优化关键词与分类
