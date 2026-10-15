@@ -1,0 +1,4 @@
+requests>=2.31
+feedparser>=6.0
+PyYAML>=6.0
+anthropic>=0.40

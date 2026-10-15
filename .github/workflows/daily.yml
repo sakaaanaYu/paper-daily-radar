@@ -1,0 +1,45 @@
+name: Daily Paper Radar
+
+on:
+  schedule:
+    # 07:35 北京时间 = 23:35 UTC 前一天（避开整点高峰）
+    - cron: "35 23 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run paper radar
+        run: python -m paper_radar.main
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          ZOTERO_API_KEY: ${{ secrets.ZOTERO_API_KEY }}
+          ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+
+      - name: Commit seen state
+        run: |
+          git config user.name "paper-radar-bot"
+          git config user.email "paper-radar-bot@users.noreply.github.com"
+          git add data/seen.json
+          if git diff --cached --quiet; then
+            echo "no state change"
+          else
+            git commit -m "chore: update seen papers [skip ci]"
+            git push
+          fi

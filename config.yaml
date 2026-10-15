@@ -1,0 +1,40 @@
+# Paper Radar 配置 —— 按你的研究兴趣改 keywords 和 venues
+
+arxiv:
+  # 关注的 arXiv 分类
+  categories:
+    - cs.HC    # 人机交互
+    - cs.AI    # 人工智能
+    - cs.CL    # 计算语言学
+    - cs.CY    # 计算与社会
+  max_results: 80
+
+openreview:
+  # 顶会 venueid。从 openreview.net 会议页 URL 或论文的 venueid 字段抄。
+  # 注意：CHI 不在 OpenReview（用 PCS 系统）；ACL 走 ACL Rolling Review。
+  venues:
+    - "ICLR.cc/2026/Conference"      # 可用
+    - "NeurIPS.cc/2026/Conference"   # 放榜后自动有数据
+    - "NeurIPS.cc/2025/Conference"   # 近期已录用
+  max_per_venue: 40
+
+# 关键词：命中标题权重高，命中摘要权重低。留空则不过滤。
+keywords:
+  - "generative AI"
+  - "GenAI"
+  - "large language model"
+  - "LLM"
+  - "AI literacy"
+  - "digital literacy"
+  - "human-AI interaction"
+  - "prompt engineering"
+  - "AI-assisted"
+  - "learning"
+  - "education"
+  - "trust in AI"
+  - "multimodal"
+  - "audiovisual"
+  - "media psychology"
+
+# 每天最多推送/入库的篇数
+max_papers_per_day: 10
