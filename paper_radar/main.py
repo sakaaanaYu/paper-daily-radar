@@ -8,6 +8,7 @@ from pathlib import Path
 from .classify import select_with_quota
 from .config import load_config
 from .dedupe import dedupe_papers, identity_keys, is_seen
+from .models import Paper
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
 from .quality import (
@@ -36,6 +37,8 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     cfg = load_config()
+    if os.environ.get("SMOKE_LLM") == "1":
+        return _smoke_llm(cfg)
     seen_list = load_seen(SEEN_PATH)
     seen = set(seen_list)
 
@@ -112,6 +115,35 @@ def main() -> int:
     # 6. 记录已见（记 DOI/arXiv id + 标题指纹，下一次同一篇的任何来源都命中）
     _mark_seen(SEEN_PATH, seen_list, papers, seen)
     log.info("完成：%d 篇已推送/入库", len(selected))
+    return 0
+
+
+def _smoke_llm(cfg: dict) -> int:
+    """只测 LLM 导读链路：1 篇假论文，不抓取、不推送、不写 seen。"""
+    sample = Paper(
+        source_id="smoke:test",
+        title="Smoke Test: Can Large Language Models Generate Structured Chinese Paper Digests?",
+        abstract=(
+            "We evaluate whether a pluggable OpenAI-compatible LLM can produce structured "
+            "Chinese reading guides for research papers. Given title and abstract, the model "
+            "must output problem, method, results, and highlights in 120-220 Chinese characters, "
+            "plus a 1-5 relevance quality score and a one-line takeaway. We test prompt design "
+            "and JSON reliability across batches."
+        ),
+        authors=["Paper Radar"],
+        date="2026-10-16",
+        url="https://example.com/smoke",
+        venue="smoke",
+    )
+    log.info("SMOKE_LLM：开始测试摘要链路 base=%s model=%s",
+             os.environ.get("LLM_BASE_URL", ""), os.environ.get("LLM_MODEL", ""))
+    summarize([sample], batch_size=1, categories=cfg.get("categories"))
+    log.info("SMOKE_LLM 结果 quality=%s why_read=%r", sample.quality, sample.why_read)
+    log.info("SMOKE_LLM 导读: %s", (sample.zh_summary or "（空）")[:300])
+    if not sample.zh_summary:
+        log.error("SMOKE_LLM 失败：导读为空")
+        return 1
+    log.info("SMOKE_LLM 通过")
     return 0
 
 

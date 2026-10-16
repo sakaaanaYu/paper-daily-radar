@@ -4,7 +4,12 @@ on:
   schedule:
     # 07:35 北京时间 = 23:35 UTC 前一天（避开整点高峰）
     - cron: "35 23 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      smoke_llm:
+        description: "只测 LLM 导读（不抓取/不推送）"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,6 +39,7 @@ jobs:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+          SMOKE_LLM: ${{ inputs.smoke_llm && '1' || '0' }}
 
       - name: Commit seen state
         run: |
