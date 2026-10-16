@@ -97,6 +97,40 @@ def verify_venues(papers: list[Paper], top_venues: dict | None = None) -> None:
             _from_dblp(p, aliases)
 
 
+def heuristic_quality(papers: list[Paper]) -> None:
+    """没配 LLM 时用可观察信号打 1-5 星，保证卡片有区分度。
+
+    LLM 导读跑起来后会覆盖这里的分。
+    """
+    for p in papers:
+        q = 3.0
+        venue = (p.accepted_at or p.venue or "").lower()
+        # 出处：顶会顶刊 +1，一般录用 +0.5，纯预印本 -0.5
+        top = (
+            "neurips", "iclr", "icml", "nature", "science", "pnas",
+            "chi", "uist", "tochi", "tmlr", "jmlr", "cscw", "pacm",
+        )
+        if any(t in venue for t in top):
+            q += 1.0
+        elif p.accepted_at:
+            q += 0.5
+        elif p.source_id.startswith("arxiv:"):
+            q -= 0.5
+        # 引用（Semantic Scholar）
+        if p.citations >= 20:
+            q += 0.5
+        elif p.citations >= 5:
+            q += 0.25
+        elif p.citations == 0 and p.source_id.startswith("arxiv:"):
+            q -= 0.25
+        # 关键词相关度
+        if p.score >= 10:
+            q += 0.5
+        elif p.score <= 2:
+            q -= 0.5
+        p.quality = max(1, min(5, int(round(q))))
+
+
 def apply_venue_boost(papers: list[Paper]) -> None:
     """已录用顶会的论文在排序里加权（保持视野：只升序，不淘汰）。"""
     for p in papers:

@@ -22,10 +22,23 @@ PROVIDER_HINTS = """
 """
 
 BASE_SYSTEM = (
-    "你是文献筛选助手。根据论文标题和摘要输出严格 JSON 数组，不要输出任何其他文字。\n"
-    '每个元素形如: {"id": 原id, "score": 1-5整数质量分, "category": 分类id, '
-    '"zh_summary": "中文摘要2-3句", "why_read": "一句话看点，不超过40字"}\n'
-    "score 标准：5=高度相关且有明显贡献，4=相关且扎实，3=相关，2=边缘相关，1=不相关。"
+    "你是文献导读助手。根据论文标题和摘要输出严格 JSON 数组，不要输出任何其他文字。\n"
+    '每个元素形如: {"id": 原id, "score": 1-5整数, "category": 分类id, '
+    '"zh_summary": "中文导读", "why_read": "一句话看点，不超过40字"}\n'
+    "\n"
+    "zh_summary 要求（120-220字，用分号或短句把要点讲明白，不要复述摘要原文）：\n"
+    "必须覆盖这四块（可以用①②③④或「问题/方法/结论/亮点」这样的小标签）：\n"
+    "① 问题：论文要解决什么问题？为什么重要？\n"
+    "② 方法：怎么做？关键设计/数据/模型是什么？\n"
+    "③ 结论：主要发现或效果如何？\n"
+    "④ 亮点：创新点、值得借鉴之处、局限或适用边界\n"
+    "\n"
+    "score 要拉开区分度，不要都给 3：\n"
+    "5=顶会顶刊且贡献突出，方法扎实、结论有启发，值得精读\n"
+    "4=工作扎实，有一到两个可借鉴的点\n"
+    "3=相关，常规增量工作\n"
+    "2=边缘相关，或方法/结论有明显局限\n"
+    "1=不相关，或质量明显有问题\n"
 )
 
 
@@ -42,7 +55,7 @@ def summarize(
     if not papers:
         return papers
     if not os.environ.get("LLM_API_KEY") and not os.environ.get("ANTHROPIC_API_KEY"):
-        log.info("未配置 LLM_API_KEY / ANTHROPIC_API_KEY，跳过摘要")
+        log.info("未配置 LLM_API_KEY / ANTHROPIC_API_KEY，跳过导读生成")
         return papers
 
     system = BASE_SYSTEM

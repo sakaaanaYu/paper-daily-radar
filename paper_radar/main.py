@@ -9,7 +9,13 @@ from .classify import select_with_quota
 from .config import load_config
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
-from .quality import apply_venue_boost, apply_venue_labels, exclude_heuristics, verify_venues
+from .quality import (
+    apply_venue_boost,
+    apply_venue_labels,
+    exclude_heuristics,
+    heuristic_quality,
+    verify_venues,
+)
 from .rank import rank_and_filter
 from .sources.acm_conf import fetch_acm_confs
 from .sources.arxiv import fetch_arxiv
@@ -77,7 +83,8 @@ def main() -> int:
     for p in selected:
         log.info("入选: [%s][%s] %s", p.category, p.venue, p.title[:50])
 
-    # 5. LLM 加工（质量分 + 中文摘要 + 分类修正）
+    # 5. 先用启发式给质量分（无 LLM 也有区分度），LLM 导读跑起来后会覆盖
+    heuristic_quality(selected)
     summarize(selected, categories=cfg["categories"])
 
     # 5. 推送

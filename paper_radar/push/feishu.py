@@ -40,12 +40,16 @@ def send_digest(
             venue = _safe(p.venue or p.accepted_at or "")
             if p.accepted_at and p.accepted_at.lower() not in venue.lower():
                 venue = f"✅ {_safe(p.accepted_at)}"
-            takeaway = p.why_read or p.zh_summary or (p.abstract or "")[:100]
-            line = (
-                f"**[{_safe(p.title)}]({p.url})**\n"
-                f"📍 {venue} · {stars} · {p.date}\n"
-                f"{_safe(takeaway)}"
-            )
+
+            # 只展示导读，不展示摘要原文
+            parts = [f"**[{_safe(p.title)}]({p.url})**", f"📍 {venue} · {stars} · {p.date}"]
+            if p.why_read:
+                parts.append(f"💡 {_safe(p.why_read)}")
+            if p.zh_summary:
+                parts.append(_safe(p.zh_summary))
+            elif not p.why_read:
+                parts.append("_（导读未生成：配置 LLM_API_KEY 后自动产出）_")
+            line = "\n".join(parts)
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": line}})
 
     payload = {
