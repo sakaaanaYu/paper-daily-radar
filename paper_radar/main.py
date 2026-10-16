@@ -101,6 +101,15 @@ def main() -> int:
     # 5. 先用启发式给质量分（无 LLM 也有区分度），LLM 导读跑起来后会覆盖
     heuristic_quality(selected)
     summarize(selected, categories=cfg["categories"])
+    for p in selected:
+        log.info(
+            "导读 [%s] ★%s | %s | %s | %s",
+            p.category,
+            p.quality or 3,
+            p.venue,
+            (p.why_read or "")[:60],
+            (p.zh_summary or "（无导读）")[:120],
+        )
 
     # 5. 推送
     today = date.today().isoformat()
