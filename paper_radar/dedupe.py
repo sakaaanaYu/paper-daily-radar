@@ -45,6 +45,9 @@ def identity_keys(p: Paper) -> list[str]:
 
 
 def is_seen(p: Paper, seen_keys: set[str]) -> bool:
+    # source_id 兼容旧 seen.json（早期只记了 source_id）
+    if p.source_id in seen_keys:
+        return True
     return any(k in seen_keys for k in identity_keys(p))
 
 
