@@ -84,6 +84,10 @@ def verify_venues(papers: list[Paper], top_venues: dict | None = None) -> None:
         if p.source_id.startswith("journal:"):
             p.accepted_at = _match_top_venue(p.venue, aliases) or p.venue
             continue
+        # ACM 会议源（CHI/UIST）：会议名即出处
+        if p.source_id.startswith("conf:"):
+            p.accepted_at = _match_top_venue(p.venue, aliases) or p.venue.split()[0]
+            continue
         # OpenReview 来源本身就是按顶会 venueid 捞的已录用稿
         if p.source_id.startswith("openreview:"):
             p.accepted_at = _match_top_venue(p.venue, aliases) or p.venue.split()[0]

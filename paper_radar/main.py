@@ -11,6 +11,7 @@ from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
 from .quality import apply_venue_boost, apply_venue_labels, exclude_heuristics, verify_venues
 from .rank import rank_and_filter
+from .sources.acm_conf import fetch_acm_confs
 from .sources.arxiv import fetch_arxiv
 from .sources.journals import fetch_journals
 from .sources.openreview import fetch_openreview
@@ -45,6 +46,10 @@ def main() -> int:
         )
     if cfg.get("journals"):
         papers.extend(fetch_journals(cfg["journals"], int(cfg.get("max_per_journal", 20))))
+    if cfg.get("acm_confs"):
+        papers.extend(
+            fetch_acm_confs(cfg["acm_confs"], int(cfg.get("max_per_conf", 25)))
+        )
 
     fresh = [p for p in papers if p.source_id not in seen]
     log.info("抓取 %d 篇，其中未见过 %d 篇", len(papers), len(fresh))

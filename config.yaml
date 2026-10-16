@@ -32,6 +32,13 @@ journals:
   "PACM HCI (CSCW/IUI)": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=pacmhci"
 max_per_journal: 20
 
+# ACM 会议（CHI/UIST 等）不在 OpenReview，走 OpenAlex source id 抓
+# source id 来自 https://api.openalex.org/sources?search=CHI+Conference...
+acm_confs:
+  "CHI": "S4363607743"
+  "UIST": "S7407087746"
+max_per_conf: 25
+
 # 分类保底：每天每类至少几篇，剩余名额按分数补满（防止某类吃满）
 per_cat_min: 2
 
