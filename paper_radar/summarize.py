@@ -117,6 +117,10 @@ def _with_retry(fn, label: str, tries: int = 4):
             return fn()
         except Exception as e:
             last = e
+            msg = str(e).lower()
+            # 欠费/停服/密钥无效：重试也没用，直接抛
+            if any(s in msg for s in ("insufficient balance", "suspended", "invalid api key", "authentication")):
+                raise
             retryable = (
                 isinstance(e, requests.HTTPError)
                 and e.response is not None
