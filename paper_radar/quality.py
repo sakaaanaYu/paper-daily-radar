@@ -92,9 +92,13 @@ def verify_venues(papers: list[Paper], top_venues: dict | None = None) -> None:
         if p.source_id.startswith("openreview:"):
             p.accepted_at = _match_top_venue(p.venue, aliases) or p.venue.split()[0]
     tried = _from_semantic_scholar(papers, aliases)
+    dblp_ok = True
     for p in papers:
         if p.source_id.startswith("arxiv:") and p not in tried and not p.accepted_at:
-            _from_dblp(p, aliases)
+            if not dblp_ok:
+                break
+            dblp_ok = _from_dblp(p, aliases)
+            time.sleep(0.8)  # DBLP 对高频请求会 429
 
 
 def heuristic_quality(papers: list[Paper]) -> None:
@@ -207,7 +211,8 @@ def _from_semantic_scholar(papers: list[Paper], aliases: dict) -> list[Paper]:
 # ---------- DBLP 兜底 ----------
 
 
-def _from_dblp(p: Paper, aliases: dict) -> None:
+def _from_dblp(p: Paper, aliases: dict) -> bool:
+    """查一篇。返回 False 表示 DBLP 在限流，调用方应停止继续查。"""
     try:
         r = requests.get(
             DBLP_API,
@@ -215,18 +220,22 @@ def _from_dblp(p: Paper, aliases: dict) -> None:
             headers={"User-Agent": "paper-radar/1.0"},
             timeout=20,
         )
+        if r.status_code == 429:
+            log.warning("DBLP 限流，跳过后续查证")
+            return False
         r.raise_for_status()
         hits = r.json().get("result", {}).get("hits", {}).get("hit", []) or []
     except Exception as e:
         log.warning("DBLP 查询失败 [%s]: %s", p.title[:30], e)
-        return
+        return True
     for h in hits:
         info = h.get("info", {})
         hit = _match_top_venue(str(info.get("venue", "")), aliases)
         if hit:
             p.accepted_at = hit
             log.info("DBLP 录用查证: %s -> %s", p.title[:40], hit)
-            return
+            return True
+    return True
 
 
 def _match_top_venue(venue_str: str, aliases: dict) -> str:

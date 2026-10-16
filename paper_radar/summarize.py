@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import time
 
 import requests
 
@@ -95,14 +96,38 @@ def summarize(
                     p.category = cat
         except Exception as e:
             log.warning("摘要批次 %d 失败: %s", i // batch_size, e)
+        # 批次间隔，降低触发服务商限流的概率
+        if i + batch_size < len(papers):
+            time.sleep(1.5)
     return papers
 
 
 def _chat(system: str, user: str) -> str:
     """先走 OpenAI 兼容接口（DeepSeek/Kimi/Qwen/GLM/OpenAI/Ollama），再退回 Claude。"""
     if os.environ.get("LLM_API_KEY"):
-        return _chat_openai_compatible(system, user)
-    return _chat_anthropic(system, user)
+        return _with_retry(lambda: _chat_openai_compatible(system, user), "LLM")
+    return _with_retry(lambda: _chat_anthropic(system, user), "Claude")
+
+
+def _with_retry(fn, label: str, tries: int = 4):
+    """429/5xx/超时退避重试，避免一次限流就丢掉整批导读。"""
+    last = None
+    for attempt in range(tries):
+        try:
+            return fn()
+        except Exception as e:
+            last = e
+            retryable = (
+                isinstance(e, requests.HTTPError)
+                and e.response is not None
+                and e.response.status_code in (429, 500, 502, 503, 529)
+            ) or isinstance(e, (requests.Timeout, requests.ConnectionError))
+            if not retryable or attempt == tries - 1:
+                raise
+            wait = 2 ** attempt * 3  # 3s, 6s, 12s
+            log.warning("%s 调用失败（%d/%d）：%s，%ds 后重试", label, attempt + 1, tries, e, wait)
+            time.sleep(wait)
+    raise last  # pragma: no cover
 
 
 def _chat_openai_compatible(system: str, user: str) -> str:
@@ -122,6 +147,11 @@ def _chat_openai_compatible(system: str, user: str) -> str:
         },
         timeout=120,
     )
+    if r.status_code == 429:
+        # 服务商限流：带一点响应体，方便判断是 RPM 还是额度用尽
+        raise requests.HTTPError(
+            f"429 限流 ({base}): {r.text[:160]}", response=r
+        )
     r.raise_for_status()
     data = r.json()
     try:
