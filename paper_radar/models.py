@@ -15,6 +15,7 @@ class Paper:
     url: str
     venue: str  # "arXiv cs.AI" / "NeurIPS 2026"
     pdf_url: str = ""
+    doi: str = ""  # 出版方 DOI（10.xxxx/...），用于跨源去重
     keywords: list[str] = field(default_factory=list)
     category: str = "other"  # 分类 id，见 config.yaml categories
     score: float = 0.0  # 关键词相关度

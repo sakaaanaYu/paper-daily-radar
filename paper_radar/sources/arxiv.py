@@ -83,6 +83,14 @@ def _to_paper(e, fallback_cat: str) -> Paper | None:
     if e.get("published_parsed"):
         date = datetime(*e["published_parsed"][:6]).strftime("%Y-%m-%d")
 
+    # 出版方 DOI（如果有），用于和会议/期刊版本跨源去重
+    doi = ""
+    for k in ("prism_doi", "arxiv_doi", "dc_identifier", "doi"):
+        v = e.get(k)
+        if isinstance(v, str) and "10." in v:
+            doi = v.strip()
+            break
+
     return Paper(
         source_id=f"arxiv:{arxiv_id}",
         title=re.sub(r"\s+", " ", e.get("title", "")).strip(),
@@ -93,6 +101,7 @@ def _to_paper(e, fallback_cat: str) -> Paper | None:
         venue=f"arXiv {cats[0] if cats else fallback_cat}",
         pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf",
         keywords=cats[:5],
+        doi=doi,
     )
 
 

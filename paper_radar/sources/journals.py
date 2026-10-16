@@ -115,6 +115,7 @@ def _to_paper(e, journal: str) -> Paper | None:
         url=link,
         venue=journal,  # 出处直接标期刊名
         pdf_url=pdf,
+        doi=doi,
     )
 
 

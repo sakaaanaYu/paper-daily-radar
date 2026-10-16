@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .classify import select_with_quota
 from .config import load_config
+from .dedupe import dedupe_papers, identity_keys, is_seen
 from .push.feishu import send_digest
 from .push.zotero import ZoteroClient
 from .quality import (
@@ -38,7 +39,7 @@ def main() -> int:
     seen_list = load_seen(SEEN_PATH)
     seen = set(seen_list)
 
-    # 1. 抓取：arXiv 预印本 + OpenReview 顶会 + 顶刊 RSS
+    # 1. 抓取：arXiv 预印本 + OpenReview 顶会 + 顶刊 RSS + ACM 会议
     papers = []
     if cfg["arxiv"].get("categories"):
         papers.extend(
@@ -57,15 +58,18 @@ def main() -> int:
             fetch_acm_confs(cfg["acm_confs"], int(cfg.get("max_per_conf", 25)))
         )
 
-    fresh = [p for p in papers if p.source_id not in seen]
-    log.info("抓取 %d 篇，其中未见过 %d 篇", len(papers), len(fresh))
+    # 2. 跨源去重（DOI / 标题指纹，同一篇的 arXiv 版和会议版只留一条）
+    raw_n = len(papers)
+    papers = dedupe_papers(papers)
+    fresh = [p for p in papers if not is_seen(p, seen)]
+    log.info("抓取 %d 篇，跨源去重后 %d，其中未见过 %d 篇", raw_n, len(papers), len(fresh))
 
-    # 2. 排除启发 + 关键词初筛（先拿到候选池，再做质量加权）
+    # 3. 排除启发 + 关键词初筛（先拿到候选池，再做质量加权）
     cleaned = exclude_heuristics(fresh)
     candidates = rank_and_filter(cleaned, cfg["keywords"], limit=max(len(cleaned), 1))
     if not candidates:
         log.info("今日无新增匹配论文")
-        save_seen(SEEN_PATH, seen_list + [p.source_id for p in papers if p.source_id not in seen])
+        _mark_seen(SEEN_PATH, seen_list, papers, seen)
         return 0
 
     # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权 + 出处标注
@@ -105,10 +109,21 @@ def main() -> int:
     else:
         log.warning("未设置 ZOTERO_API_KEY，跳过 Zotero")
 
-    # 5. 记录已见
-    save_seen(SEEN_PATH, seen_list + [p.source_id for p in papers if p.source_id not in seen])
+    # 6. 记录已见（记 DOI/arXiv id + 标题指纹，下一次同一篇的任何来源都命中）
+    _mark_seen(SEEN_PATH, seen_list, papers, seen)
     log.info("完成：%d 篇已推送/入库", len(selected))
     return 0
+
+
+def _mark_seen(path, seen_list: list[str], papers, seen: set[str]) -> None:
+    """把本轮所有论文的多重身份 key 写入 seen，保证跨源、跨天都不重复推送。"""
+    new_keys: list[str] = []
+    for p in papers:
+        for k in identity_keys(p):
+            if k not in seen:
+                seen.add(k)
+                new_keys.append(k)
+    save_seen(path, seen_list + new_keys)
 
 
 if __name__ == "__main__":

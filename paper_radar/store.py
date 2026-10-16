@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-MAX_SEEN = 3000
+MAX_SEEN = 20000  # 每天新增几百条 key，留足约一个月的记忆，防止老论文被当新论文重推
 
 
 def load_seen(path: Path) -> list[str]:

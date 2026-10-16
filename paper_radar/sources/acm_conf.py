@@ -82,6 +82,7 @@ def _to_paper(w: dict, conf: str) -> Paper | None:
         url=url,
         venue=f"{conf} {year}".strip(),
         pdf_url=pdf or "",
+        doi=doi,
     )
 
 
