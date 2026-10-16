@@ -10,6 +10,10 @@ on:
         description: "只测 LLM 导读（不抓取/不推送）"
         type: boolean
         default: false
+      dry_run:
+        description: "测试模式：出飞书卡片，但不写 seen、不进 Zotero"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -40,6 +44,7 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
           SMOKE_LLM: ${{ inputs.smoke_llm && '1' || '0' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
       - name: Commit seen state
         run: |

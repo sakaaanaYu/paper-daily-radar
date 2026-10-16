@@ -39,7 +39,11 @@ def main() -> int:
     cfg = load_config()
     if os.environ.get("SMOKE_LLM") == "1":
         return _smoke_llm(cfg)
-    seen_list = load_seen(SEEN_PATH)
+    # DRY_RUN=1：测试模式——出卡片，但不写 seen、不进 Zotero，可反复跑
+    dry_run = os.environ.get("DRY_RUN") == "1"
+    if dry_run:
+        log.info("DRY_RUN 测试模式：不写 seen.json、不写 Zotero")
+    seen_list = load_seen(SEEN_PATH) if not dry_run else []
     seen = set(seen_list)
 
     # 1. 抓取：arXiv 预印本 + OpenReview 顶会 + 顶刊 RSS + ACM 会议
@@ -64,7 +68,10 @@ def main() -> int:
     # 2. 跨源去重（DOI / 标题指纹，同一篇的 arXiv 版和会议版只留一条）
     raw_n = len(papers)
     papers = dedupe_papers(papers)
-    fresh = [p for p in papers if not is_seen(p, seen)]
+    if dry_run:
+        fresh = papers  # 测试：忽略 seen，每次都出结果
+    else:
+        fresh = [p for p in papers if not is_seen(p, seen)]
     log.info("抓取 %d 篇，跨源去重后 %d，其中未见过 %d 篇", raw_n, len(papers), len(fresh))
 
     # 3. 排除启发 + 关键词初筛（先拿到候选池，再做质量加权）
@@ -72,7 +79,8 @@ def main() -> int:
     candidates = rank_and_filter(cleaned, cfg["keywords"], limit=max(len(cleaned), 1))
     if not candidates:
         log.info("今日无新增匹配论文")
-        _mark_seen(SEEN_PATH, seen_list, papers, seen)
+        if not dry_run:
+            _mark_seen(SEEN_PATH, seen_list, papers, seen)
         return 0
 
     # 3. 录用查证（Semantic Scholar / DBLP）+ 顶会加权 + 出处标注
@@ -103,7 +111,9 @@ def main() -> int:
         log.warning("未设置 FEISHU_WEBHOOK_URL，跳过飞书推送")
 
     zotero_key = os.environ.get("ZOTERO_API_KEY", "")
-    if zotero_key:
+    if dry_run:
+        log.info("DRY_RUN：跳过 Zotero 入库")
+    elif zotero_key:
         try:
             client = ZoteroClient(zotero_key, os.environ.get("ZOTERO_USER_ID") or None)
             client.save_papers(selected)
@@ -112,9 +122,12 @@ def main() -> int:
     else:
         log.warning("未设置 ZOTERO_API_KEY，跳过 Zotero")
 
-    # 6. 记录已见（记 DOI/arXiv id + 标题指纹，下一次同一篇的任何来源都命中）
-    _mark_seen(SEEN_PATH, seen_list, papers, seen)
-    log.info("完成：%d 篇已推送/入库", len(selected))
+    # 6. 记录已见（测试模式不落盘）
+    if dry_run:
+        log.info("DRY_RUN 完成：%d 篇（未写 seen，可直接重跑）", len(selected))
+    else:
+        _mark_seen(SEEN_PATH, seen_list, papers, seen)
+        log.info("完成：%d 篇已推送/入库", len(selected))
     return 0
 
 
