@@ -24,7 +24,7 @@ from .sources.arxiv import fetch_arxiv
 from .sources.journals import fetch_journals
 from .sources.openreview import fetch_openreview
 from .store import load_seen, save_seen
-from .summarize import summarize
+from .summarize import summarize, summarize_daily_insight
 
 log = logging.getLogger("paper_radar")
 
@@ -103,19 +103,27 @@ def main() -> int:
     summarize(selected, categories=cfg["categories"])
     for p in selected:
         log.info(
-            "导读 [%s] ★%s | %s | %s | %s",
+            "导读 [%s] | %s | %s\n%s",
             p.category,
-            p.quality or 3,
             p.venue,
             (p.why_read or "")[:60],
-            (p.zh_summary or "（无导读）")[:120],
+            (p.zh_summary or "（无导读）"),
         )
+    insight = summarize_daily_insight(selected)
+    if insight:
+        log.info("今日总结：\n%s", insight)
 
     # 5. 推送
     today = date.today().isoformat()
     feishu_url = os.environ.get("FEISHU_WEBHOOK_URL", "")
     if feishu_url:
-        send_digest(feishu_url, selected, today, categories=cfg["categories"])
+        send_digest(
+            feishu_url,
+            selected,
+            today,
+            categories=cfg["categories"],
+            insight=insight,
+        )
     else:
         log.warning("未设置 FEISHU_WEBHOOK_URL，跳过飞书推送")
 

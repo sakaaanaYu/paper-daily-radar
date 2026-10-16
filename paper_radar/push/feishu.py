@@ -15,8 +15,9 @@ def send_digest(
     papers: list[Paper],
     date_str: str,
     categories: list[dict] | None = None,
+    insight: str = "",
 ) -> bool:
-    """发飞书群机器人日报卡片，按分类分组。"""
+    """发飞书群机器人日报卡片，按分类分组；insight 为今日总结（可选）。"""
     if not webhook_url or not papers:
         return False
 
@@ -35,22 +36,30 @@ def send_digest(
             }
         )
         for p in items:
-            stars = "⭐" * (p.quality or 3)
             # 出处优先写录用去向/刊名；纯预印本才落回 arXiv
             venue = _safe(p.venue or p.accepted_at or "")
             if p.accepted_at and p.accepted_at.lower() not in venue.lower():
                 venue = f"✅ {_safe(p.accepted_at)}"
 
-            # 只展示导读，不展示摘要原文
-            parts = [f"**[{_safe(p.title)}]({p.url})**", f"📍 {venue} · {stars} · {p.date}"]
+            # 只展示导读，不展示摘要原文；四要点分段保留换行
+            parts = [f"**[{_safe(p.title)}]({p.url})**", f"📍 {venue} · {p.date}"]
             if p.why_read:
                 parts.append(f"💡 {_safe(p.why_read)}")
             if p.zh_summary:
-                parts.append(_safe(p.zh_summary))
+                parts.append(_safe_multiline(p.zh_summary))
             elif not p.why_read:
                 parts.append("_（导读未生成：配置 LLM_API_KEY 后自动产出）_")
             line = "\n".join(parts)
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": line}})
+
+    if insight:
+        elements.append({"tag": "hr"})
+        elements.append(
+            {
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": f"**🧭 今日总结与研究启发**\n{_safe_multiline(insight)}"},
+            }
+        )
 
     payload = {
         "msg_type": "interactive",
@@ -84,3 +93,13 @@ def send_digest(
 def _safe(text: str) -> str:
     """避免 lark_md 的链接/强调语法被标题里的字符破坏。"""
     return (text or "").replace("[", "［").replace("]", "］").replace("\n", " ").strip()
+
+
+def _safe_multiline(text: str) -> str:
+    """保留段内换行（导读四要点/今日总结用），只抹掉破坏链接的括号。"""
+    lines = [ln.strip() for ln in (text or "").split("\n")]
+    out = []
+    for ln in lines:
+        if ln:
+            out.append(ln.replace("[", "［").replace("]", "］"))
+    return "\n".join(out)

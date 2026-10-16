@@ -27,12 +27,12 @@ BASE_SYSTEM = (
     '每个元素形如: {"id": 原id, "score": 1-5整数, "category": 分类id, '
     '"zh_summary": "中文导读", "why_read": "一句话看点，不超过40字"}\n'
     "\n"
-    "zh_summary 要求（120-220字，用分号或短句把要点讲明白，不要复述摘要原文）：\n"
-    "必须覆盖这四块（可以用①②③④或「问题/方法/结论/亮点」这样的小标签）：\n"
-    "① 问题：论文要解决什么问题？为什么重要？\n"
-    "② 方法：怎么做？关键设计/数据/模型是什么？\n"
-    "③ 结论：主要发现或效果如何？\n"
-    "④ 亮点：创新点、值得借鉴之处、局限或适用边界\n"
+    "zh_summary 要求（每点一行、共四行，每行 25–55 字，用 \\n 换行，不要把四点挤成一段）：\n"
+    "问题：…\n"
+    "方法：…\n"
+    "结论：…\n"
+    "亮点：…\n"
+    "（用「问题：」「方法：」「结论：」「亮点：」开头；不要复述摘要原文，把关键设计与边界讲明白）\n"
     "\n"
     "score 要拉开区分度，不要都给 3：\n"
     "5=顶会顶刊且贡献突出，方法扎实、结论有启发，值得精读\n"
@@ -41,6 +41,40 @@ BASE_SYSTEM = (
     "2=边缘相关，或方法/结论有明显局限\n"
     "1=不相关，或质量明显有问题\n"
 )
+
+INSIGHT_SYSTEM = (
+    "你是科研选题顾问。读者是社科与计算机交叉背景的研究者，关心可信人工智能、人机交互、"
+    "人机协作、AI 素养与社会影响，看这批论文是为了拓展视野、寻找可开展的研究方向。\n"
+    "请根据「今日入选论文」写一份中文总结，严格两段结构，总长 250–400 字：\n"
+    "\n"
+    "今日图景：\n"
+    "用 2–3 句话概括这批工作共同在推进什么、有哪些张力或空白（不要逐篇复述标题）。\n"
+    "\n"
+    "研究启发：\n"
+    "给 2–4 条可展开的方向，每条一行，格式「方向名 — 具体切口/可做的研究」。\n"
+    "要求：具体、可下手（方法迁移、跨领域应用、可做的实证或系统工作、尚未回答的问题）；"
+    "允许与经典社科/教育/传播/心理测量结合；避免空话套话，不要写「进一步研究」这类废话。\n"
+)
+
+
+def summarize_daily_insight(papers: list[Paper]) -> str:
+    """整卡末尾的今日总结 + 研究启发。失败时返回空串。"""
+    if not papers or not (
+        os.environ.get("LLM_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+    ):
+        return ""
+    lines = []
+    for i, p in enumerate(papers, 1):
+        lines.append(
+            f"{i}. [{p.category}] {p.title} | {p.venue} | {(p.why_read or '')[:50]}"
+        )
+    prompt = "今日入选论文：\n" + "\n".join(lines)
+    try:
+        text = _with_retry(lambda: _chat(INSIGHT_SYSTEM, prompt), "LLM")
+        return (text or "").strip()
+    except Exception as e:
+        log.warning("今日总结生成失败: %s", e)
+        return ""
 
 
 def summarize(
