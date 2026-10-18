@@ -81,11 +81,13 @@ def summarize(
     papers: list[Paper],
     batch_size: int = 8,
     categories: list[dict] | None = None,
+    update_category: bool = True,
 ) -> list[Paper]:
     """生成中文摘要、质量分、分类修正。
 
     优先 OpenAI 兼容接口（LLM_API_KEY），其次 Claude（ANTHROPIC_API_KEY）。
     categories 传入时，LLM 的 category 输出会修正关键词预分类结果。
+    update_category=False 时保持原分类（传播链路的 fresh/backfill）。
     """
     if not papers:
         return papers
@@ -126,7 +128,7 @@ def summarize(
                 p.why_read = str(item.get("why_read") or "").strip()
                 # 混合分类：LLM 修正关键词预分类（仅接受合法 id）
                 cat = str(item.get("category") or "").strip().lower()
-                if cat and (valid_ids is None or cat in valid_ids):
+                if update_category and cat and (valid_ids is None or cat in valid_ids):
                     p.category = cat
         except Exception as e:
             log.warning("摘要批次 %d 失败: %s", i // batch_size, e)

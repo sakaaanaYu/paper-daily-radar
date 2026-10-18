@@ -109,7 +109,7 @@ def run_comm() -> int:
     for p in selected:
         log.info("传播入选 [%s][%s] %s", p.category, p.venue, p.title[:50])
 
-    summarize(selected, batch_size=6)
+    summarize(selected, batch_size=6, update_category=False)
     insight = summarize_daily_insight(selected)
 
     # 卡片按「新文 / 回补精选」两栏展示，而不是配置里的四板块
