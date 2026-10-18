@@ -112,12 +112,23 @@ def run_comm() -> int:
     summarize(selected, batch_size=6)
     insight = summarize_daily_insight(selected)
 
+    # 卡片按「新文 / 回补精选」两栏展示，而不是配置里的四板块
+    groups_map: dict[str, list[Paper]] = {"fresh": [], "backfill": []}
+    for p in selected:
+        groups_map.setdefault(p.category, []).append(p)
+    comm_cats = [
+        {"id": "fresh", "label": "📰 新文"},
+        {"id": "backfill", "label": "📎 回补精选"},
+    ]
+
     today_s = today.isoformat()
-    url = os.environ.get("FEISHU_COMM_WEBHOOK_URL") or os.environ.get("FEISHU_WEBHOOK_URL") or ""
+    url = os.environ.get("FEISHU_COMM_WEBHOOK_URL") or ""
+    if not url:
+        log.warning("未设置 FEISHU_COMM_WEBHOOK_URL（请单独建 Secret，避免和 AI 雷达混发）")
     if url:
-        send_digest(url, selected, f"{today_s} · 传播", insight=insight)
+        send_digest(url, selected, f"{today_s} · 传播", categories=comm_cats, insight=insight)
     else:
-        log.warning("未设置 FEISHU_COMM_WEBHOOK_URL，跳过飞书")
+        log.info("跳过飞书（缺 FEISHU_COMM_WEBHOOK_URL）")
 
     if not dry_run and os.environ.get("ZOTERO_API_KEY"):
         try:

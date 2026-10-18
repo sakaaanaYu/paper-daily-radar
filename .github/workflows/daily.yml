@@ -67,7 +67,8 @@ jobs:
         run: |
           git config user.name "paper-radar-bot"
           git config user.email "paper-radar-bot@users.noreply.github.com"
-          git add data/seen.json data/seen_comm.json
+          git add data/seen.json 2>/dev/null || true
+          git add data/seen_comm.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "no state change"
           else
