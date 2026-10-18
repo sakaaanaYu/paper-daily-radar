@@ -66,24 +66,30 @@ class ZoteroClient:
         return key
 
     def clear_tagged(self, tag: str = "Paper Radar") -> int:
-        """删除打了指定标签的顶层条目（及其附件/笔记），返回删除数。"""
+        """删除打了指定标签的顶层条目（及其附件/笔记），返回删除数。
+
+        用 seen 集合跳过删不掉的条目，避免 start=0 时反复抓同一页死循环。
+        """
         deleted = 0
-        start = 0
-        while True:
+        tried: set[str] = set()
+        for _page in range(50):  # 最多 50 页 × 100，足够清调试库
             r = requests.get(
                 self._items_url(),
                 headers=self._headers(),
-                params={"tag": tag, "limit": 100, "start": start},
+                params={"tag": tag, "limit": 100},
                 timeout=30,
             )
             r.raise_for_status()
-            items = r.json() or []
+            items = [
+                it
+                for it in (r.json() or [])
+                if it.get("key") and it["key"] not in tried
+            ]
             if not items:
                 break
             for it in items:
-                key = it.get("key")
-                if not key:
-                    continue
+                key = it["key"]
+                tried.add(key)
                 try:
                     d = requests.delete(
                         f"{self._items_url()}/{key}", headers=self._headers(), timeout=30
@@ -94,9 +100,7 @@ class ZoteroClient:
                         log.warning("删除失败 %s: %s", key, d.status_code)
                 except Exception as e:
                     log.warning("删除失败 %s: %s", key, e)
-            if len(items) < 100:
-                break
-        log.info("Zotero 清除标签「%s」条目 %d 条", tag, deleted)
+        log.info("Zotero 清除标签「%s」条目 %d 条（尝试 %d）", tag, deleted, len(tried))
         return deleted
 
     # ---------- 入库 ----------
