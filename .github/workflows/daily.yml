@@ -2,8 +2,8 @@ name: Daily Paper Radar
 
 on:
   schedule:
-    # 07:35 北京时间 = 23:35 UTC 前一天（避开整点高峰）
-    - cron: "35 23 * * *"
+    # 每天北京时间 10:02（02:02 UTC）；故意避开 :00，减少 GitHub cron 高峰排队
+    - cron: "2 2 * * *"
   workflow_dispatch:
     inputs:
       smoke_llm:
