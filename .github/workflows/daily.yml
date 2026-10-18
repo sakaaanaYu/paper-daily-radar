@@ -49,7 +49,6 @@ jobs:
 
       - name: Run paper radar
         if: ${{ inputs.reset_library != true && !(inputs.only_comm == true) }}
-        if: ${{ !(inputs.only_comm == true) }}
         run: python -m paper_radar.main
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
