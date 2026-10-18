@@ -135,7 +135,7 @@ def run_comm() -> int:
             client = ZoteroClient(
                 os.environ["ZOTERO_API_KEY"], os.environ.get("ZOTERO_USER_ID") or None
             )
-            client.save_papers(selected)
+            client.save_papers(selected, collection="comm-daily")
         except Exception as e:
             log.error("Zotero 写入失败: %s", e)
     elif dry_run:

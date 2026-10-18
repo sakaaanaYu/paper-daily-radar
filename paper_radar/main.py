@@ -133,7 +133,7 @@ def main() -> int:
     elif zotero_key:
         try:
             client = ZoteroClient(zotero_key, os.environ.get("ZOTERO_USER_ID") or None)
-            client.save_papers(selected)
+            client.save_papers(selected, collection="AI-daily")
         except Exception as e:
             log.error("Zotero 写入失败: %s", e)
     else:

@@ -38,12 +38,75 @@ class ZoteroClient:
     def _items_url(self) -> str:
         return f"{API}/users/{self.user_id}/items"
 
+    # ---------- 集合 ----------
+
+    def ensure_collection(self, name: str) -> str:
+        """按名字找集合，没有就建。返回 collection key。"""
+        if not name:
+            return ""
+        r = requests.get(
+            f"{API}/users/{self.user_id}/collections",
+            headers=self._headers(),
+            params={"limit": 100},
+            timeout=30,
+        )
+        r.raise_for_status()
+        for c in r.json() or []:
+            if (c.get("data") or {}).get("name") == name:
+                return c["key"]
+        r = requests.post(
+            f"{API}/users/{self.user_id}/collections",
+            headers=self._headers(),
+            json={"name": name},
+            timeout=30,
+        )
+        r.raise_for_status()
+        key = r.json()["successful"]["0"]["key"]
+        log.info("Zotero 创建集合 %s -> %s", name, key)
+        return key
+
+    def clear_tagged(self, tag: str = "Paper Radar") -> int:
+        """删除打了指定标签的顶层条目（及其附件/笔记），返回删除数。"""
+        deleted = 0
+        start = 0
+        while True:
+            r = requests.get(
+                self._items_url(),
+                headers=self._headers(),
+                params={"tag": tag, "limit": 100, "start": start},
+                timeout=30,
+            )
+            r.raise_for_status()
+            items = r.json() or []
+            if not items:
+                break
+            for it in items:
+                key = it.get("key")
+                if not key:
+                    continue
+                try:
+                    d = requests.delete(
+                        f"{self._items_url()}/{key}", headers=self._headers(), timeout=30
+                    )
+                    if d.status_code in (200, 204):
+                        deleted += 1
+                    else:
+                        log.warning("删除失败 %s: %s", key, d.status_code)
+                except Exception as e:
+                    log.warning("删除失败 %s: %s", key, e)
+            if len(items) < 100:
+                break
+        log.info("Zotero 清除标签「%s」条目 %d 条", tag, deleted)
+        return deleted
+
     # ---------- 入库 ----------
 
-    def save_papers(self, papers: list[Paper]) -> None:
+    def save_papers(self, papers: list[Paper], collection: str = "") -> None:
+        """collection 传集合名（如 AI-daily / comm-daily），自动建或复用。"""
         if not papers:
             return
-        items = [to_item(p) for p in papers]
+        col_key = self.ensure_collection(collection) if collection else ""
+        items = [to_item(p, collection_key=col_key) for p in papers]
         r = requests.post(self._items_url(), headers=self._headers(), json=items, timeout=60)
         r.raise_for_status()
         body = r.json()
@@ -78,9 +141,9 @@ class ZoteroClient:
                 f"<p><strong>💡 一句话看点</strong></p><p>{html.escape(p.why_read)}</p>"
             )
         if p.zh_summary:
-            parts.append(
-                f"<p><strong>📝 中文摘要</strong></p><p>{html.escape(p.zh_summary)}</p>"
-            )
+            # 四要点分段：换行保留为 <br>
+            body = html.escape(p.zh_summary).replace("\n", "<br/>")
+            parts.append(f"<p><strong>📝 中文导读</strong></p><p>{body}</p>")
         if not parts:
             return
         note = {"itemType": "note", "parentItem": parent_key, "note": "".join(parts)}
@@ -189,7 +252,7 @@ class ZoteroClient:
         return "ok"
 
 
-def to_item(p: Paper) -> dict:
+def to_item(p: Paper, collection_key: str = "") -> dict:
     creators = [to_creator(a) for a in (p.authors or [])[:25] if a]
     tags = [{"tag": "Paper Radar"}]
     if p.accepted_at:
@@ -210,10 +273,11 @@ def to_item(p: Paper) -> dict:
         "url": p.url,
         "tags": tags,
     }
-    if p.source_id.startswith("journal:"):
+    if collection_key:
+        base["collections"] = [collection_key]
+    if p.source_id.startswith(("journal:", "comm:")):
         # 顶刊文章：journalArticle + 期刊名
-        parts = p.source_id.split(":")
-        journal = p.venue or parts[1] if len(parts) > 1 else p.venue
+        journal = p.venue or p.accepted_at or "Unknown journal"
         return {
             "itemType": "journalArticle",
             "publicationTitle": journal,

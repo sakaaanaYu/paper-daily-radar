@@ -18,6 +18,10 @@ on:
         description: "只跑传播学日更"
         type: boolean
         default: false
+      reset_library:
+        description: "调试清库：清空 seen + 删 Zotero 调试条目 + 建日更集合（不推送）"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -36,7 +40,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Reset debug library
+        if: ${{ inputs.reset_library == true }}
+        run: python -m paper_radar.reset
+        env:
+          ZOTERO_API_KEY: ${{ secrets.ZOTERO_API_KEY }}
+          ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
+
       - name: Run paper radar
+        if: ${{ inputs.reset_library != true && !(inputs.only_comm == true) }}
         if: ${{ !(inputs.only_comm == true) }}
         run: python -m paper_radar.main
         env:
@@ -52,6 +64,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
       - name: Run comm daily
+        if: ${{ inputs.reset_library != true }}
         run: python -m paper_radar.comm
         env:
           FEISHU_COMM_WEBHOOK_URL: ${{ secrets.FEISHU_COMM_WEBHOOK_URL }}
