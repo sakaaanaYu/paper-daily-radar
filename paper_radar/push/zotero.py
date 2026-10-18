@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import logging
 import re
+import time
 
 import requests
 
@@ -38,30 +39,48 @@ class ZoteroClient:
     def _items_url(self) -> str:
         return f"{API}/users/{self.user_id}/items"
 
+    def _request(self, method: str, url: str, timeout: int = 30, **kwargs) -> requests.Response:
+        """带 429/428 退避的请求；Zotero 限流时别硬冲。"""
+        last = None
+        for attempt in range(5):
+            last = requests.request(method, url, timeout=timeout, **kwargs)
+            if last.status_code not in (428, 429):
+                return last
+            wait = int(last.headers.get("Retry-After") or (2 ** attempt * 2))
+            log.warning("Zotero 限流 %s，%ss 后重试", last.status_code, wait)
+            time.sleep(wait)
+        return last
+
     # ---------- 集合 ----------
 
     def ensure_collection(self, name: str) -> str:
         """按名字找集合，没有就建。返回 collection key。"""
         if not name:
             return ""
-        r = requests.get(
+        r = self._request(
+            "GET",
             f"{API}/users/{self.user_id}/collections",
             headers=self._headers(),
             params={"limit": 100},
-            timeout=30,
         )
         r.raise_for_status()
         for c in r.json() or []:
             if (c.get("data") or {}).get("name") == name:
                 return c["key"]
-        r = requests.post(
+        # Zotero 写接口要求数组体
+        r = self._request(
+            "POST",
             f"{API}/users/{self.user_id}/collections",
             headers=self._headers(),
-            json={"name": name},
-            timeout=30,
+            json=[{"name": name}],
         )
-        r.raise_for_status()
-        key = r.json()["successful"]["0"]["key"]
+        if r.status_code >= 400:
+            log.error("创建集合失败 %s: %s", name, r.text[:300])
+            r.raise_for_status()
+        body = r.json()
+        key = (body.get("successful") or {}).get("0", {}).get("key")
+        if not key:
+            raise RuntimeError(f"集合创建响应异常: {str(body)[:300]}")
         log.info("Zotero 创建集合 %s -> %s", name, key)
         return key
 
@@ -73,11 +92,11 @@ class ZoteroClient:
         deleted = 0
         tried: set[str] = set()
         for _page in range(50):  # 最多 50 页 × 100，足够清调试库
-            r = requests.get(
+            r = self._request(
+                "GET",
                 self._items_url(),
                 headers=self._headers(),
                 params={"tag": tag, "limit": 100},
-                timeout=30,
             )
             r.raise_for_status()
             items = [
@@ -91,8 +110,8 @@ class ZoteroClient:
                 key = it["key"]
                 tried.add(key)
                 try:
-                    d = requests.delete(
-                        f"{self._items_url()}/{key}", headers=self._headers(), timeout=30
+                    d = self._request(
+                        "DELETE", f"{self._items_url()}/{key}", headers=self._headers()
                     )
                     if d.status_code in (200, 204):
                         deleted += 1
@@ -100,6 +119,7 @@ class ZoteroClient:
                         log.warning("删除失败 %s: %s", key, d.status_code)
                 except Exception as e:
                     log.warning("删除失败 %s: %s", key, e)
+                time.sleep(0.2)  # Zotero 写接口限速，留间隔
         log.info("Zotero 清除标签「%s」条目 %d 条（尝试 %d）", tag, deleted, len(tried))
         return deleted
 
