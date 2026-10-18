@@ -14,6 +14,10 @@ on:
         description: "测试模式：出飞书卡片，但不写 seen、不进 Zotero"
         type: boolean
         default: false
+      only_comm:
+        description: "只跑传播学日更"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,6 +37,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run paper radar
+        if: ${{ !(inputs.only_comm == true) }}
         run: python -m paper_radar.main
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
@@ -46,11 +51,23 @@ jobs:
           SMOKE_LLM: ${{ inputs.smoke_llm && '1' || '0' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
+      - name: Run comm daily
+        run: python -m paper_radar.comm
+        env:
+          FEISHU_COMM_WEBHOOK_URL: ${{ secrets.FEISHU_COMM_WEBHOOK_URL }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          ZOTERO_API_KEY: ${{ secrets.ZOTERO_API_KEY }}
+          ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+
       - name: Commit seen state
         run: |
           git config user.name "paper-radar-bot"
           git config user.email "paper-radar-bot@users.noreply.github.com"
-          git add data/seen.json
+          git add data/seen.json data/seen_comm.json
           if git diff --cached --quiet; then
             echo "no state change"
           else

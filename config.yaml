@@ -101,6 +101,46 @@ keywords:
 # 每天最多推送/入库的篇数
 max_papers_per_day: 10
 
+# ---- 传播学日更（独立飞书机器人 / 独立 seen_comm.json）----
+comm:
+  max_papers_per_day: 4
+  fresh_count: 2          # 近期新文
+  backfill_count: 2       # 回补精选
+  fresh_days: 30
+  backfill_min_months: 3
+  backfill_max_months: 18
+  max_per_window: 40
+  # 相关度关键词（影响排序；也可加 AI/平台等）
+  keywords:
+    - "AI"
+    - "artificial intelligence"
+    - "algorithm"
+    - "large language model"
+    - "ChatGPT"
+    - "platform"
+    - "misinformation"
+    - "disinformation"
+    - "social media"
+    - "journalism"
+    - "persuasion"
+    - "public opinion"
+    - "human-AI"
+    - "automation"
+  # SSCI Q1 / 中科院 1 区白名单（OpenAlex source id）
+  journals:
+    "Journal of Communication": "S107737141"
+    "Communication Research": "S28604305"
+    "Journalism & Mass Communication Quarterly": "S20010350"
+    "Public Opinion Quarterly": "S135539873"
+    "Human Communication Research": "S195553305"
+    "New Media & Society": "S88603889"
+    "Journal of Computer-Mediated Communication": "S30594836"
+    "Communication Theory": "S103253184"
+    "Political Communication": "S27211427"
+    "Journalism": "S111964278"
+    "Digital Journalism": "S2764497610"
+    "Information, Communication & Society": "S70010600"
+
 # 分类体系：卡片按此分组，关键词预分类 + LLM 修正
 # id 会出现在 LLM 输出里，不要随意改；label 是卡片/Zotero 上显示的名字
 categories:
