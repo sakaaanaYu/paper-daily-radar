@@ -132,7 +132,7 @@ def _paper_children(p: Paper) -> list[dict]:
                     "paragraph": {
                         "rich_text": [
                             {"type": "text", "text": {"content": f"{key}："}, "annotations": {"bold": True}},
-                            {"type": "text", "text": {"content": val}},
+                            *_rich_text(val),
                         ]
                     },
                 }
@@ -162,18 +162,90 @@ def _split_summary(zh: str) -> dict[str, str]:
 
 def _heading(level: int, text: str) -> dict:
     tag = f"heading_{min(3, max(1, level))}"
-    return {tag: {"rich_text": [{"type": "text", "text": {"content": text[:2000]}}]}}
+    return {tag: {"rich_text": _rich_text(text)}}
 
 
 def _para(text: str) -> dict:
-    return {
-        "type": "paragraph",
-        "paragraph": {"rich_text": [{"type": "text", "text": {"content": text[:2000]}}]},
-    }
+    return {"type": "paragraph", "paragraph": {"rich_text": _rich_text(text)}}
+
+
+def _bullet(text: str) -> dict:
+    return {"type": "bulleted_list_item", "bulleted_list_item": {"rich_text": _rich_text(text)}}
 
 
 def _para_blocks(text: str) -> list[dict]:
-    return [_para(ln) for ln in (text or "").splitlines() if ln.strip()]
+    """把 Markdown 文本转成 Notion 真块：**加粗**、*斜体*、- 列表 都会正确渲染。"""
+    out: list[dict] = []
+    for ln in (text or "").splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if re.match(r"^[-*+]\s+", s):
+            out.append(_bullet(re.sub(r"^[-*+]\s+", "", s)))
+        elif re.match(r"^\d+[.)]\s+", s):
+            out.append(
+                {
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {"rich_text": _rich_text(re.sub(r"^\d+[.)]\s+", "", s))},
+                }
+            )
+        else:
+            out.append(_para(s))
+    return out
+
+
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_ITALIC_RE = re.compile(r"(?<!\*)\*([^*]+?)\*(?!\*)")
+
+
+def _rich_text(text: str) -> list[dict]:
+    """把 **加粗** / *斜体* 转成 Notion rich_text 注解，而不是原样输出星号。"""
+    if not text:
+        return []
+    spans: list[dict] = []
+    # 先切加粗段，再在非加粗段里切斜体
+    pos = 0
+    for m in _BOLD_RE.finditer(text):
+        if m.start() > pos:
+            spans.extend(_italic_spans(text[pos : m.start()], bold=False))
+        spans.append(
+            {
+                "type": "text",
+                "text": {"content": m.group(1)[:2000]},
+                "annotations": {"bold": True},
+            }
+        )
+        pos = m.end()
+    if pos < len(text):
+        spans.extend(_italic_spans(text[pos:], bold=False))
+    return spans or [{"type": "text", "text": {"content": text[:2000]}}]
+
+
+def _italic_spans(text: str, bold: bool = False) -> list[dict]:
+    if not text:
+        return []
+    out: list[dict] = []
+    pos = 0
+    for m in _ITALIC_RE.finditer(text):
+        if m.start() > pos:
+            out.append(_span(text[pos : m.start()], bold=bold, italic=False))
+        out.append(_span(m.group(1), bold=bold, italic=True))
+        pos = m.end()
+    if pos < len(text):
+        out.append(_span(text[pos:], bold=bold, italic=False))
+    return out
+
+
+def _span(text: str, bold: bool = False, italic: bool = False) -> dict:
+    ann: dict = {}
+    if bold:
+        ann["bold"] = True
+    if italic:
+        ann["italic"] = True
+    item: dict = {"type": "text", "text": {"content": text[:2000]}}
+    if ann:
+        item["annotations"] = ann
+    return item
 
 
 def notion_enabled() -> bool:
