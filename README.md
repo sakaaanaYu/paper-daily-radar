@@ -108,7 +108,36 @@ arXiv · OpenReview · 顶刊 RSS · ACM 会议 · OpenAlex 窗口期刊
 
 仓库 → **Actions** → Daily Paper Radar → **Run workflow**。
 
-之后每天 **10:02**（北京时间，UTC `2 2 * * *`）自动跑，10:47（UTC `47 2 * * *`）有一次备用触发——若 10:02 已跑过，当日标记会让它空跑，不会重复推送；若 10:02 被 GitHub 挤掉没跑，10:47 补上。`data/seen*.json` 回写仓库做去重，**同一篇不会推两次**（跨源身份：出版方 DOI > arXiv id > 标题指纹；预印本见过、后来会议录用版不再推）。
+之后每天 **10:02**（北京时间，UTC `2 2 * * *`）自动跑；另有 10:47 / 12:20 / 14:35 三次备用触发——GitHub 的 schedule 会偶发漏跑或延迟，多点几次名提高命中率。任何一次跑完会往 `data/seen*.json` 写当日标记 `day:YYYY-MM-DD`，后续触发读到标记直接空跑，**不会重复推送**。`data/seen*.json` 回写仓库做去重，**同一篇不会推两次**（跨源身份：出版方 DOI > arXiv id > 标题指纹；预印本见过、后来会议录用版不再推）。
+
+### 定时触发不可靠？加一层云端 cron（推荐）
+
+GitHub Actions 的 `schedule` 在低活跃仓库上命中率不高（本仓库曾连续多天漏跑，日报靠手动触发）。治本办法是加一层**云端定时服务**到点调 GitHub API 手动触发——整个链路都在云上，**换电脑、关机都不影响**。
+
+1. **建一个细粒度 PAT**（只给这一件事用，泄露面最小）：
+   GitHub → Settings → Developer settings → [Fine-grained tokens](https://github.com/settings/personal-access-tokens/new) →
+   Repository access 选 **Only select repositories** → 这个仓库 → Permissions 只给 **Actions: Read and write** → 生成后复制。
+
+2. **配云端 cron**（任选其一，都有免费额度，跑在对方服务器上）：
+   - [cron-job.org](https://cron-job.org)（推荐，免费无广告）
+   - [EasyCron](https://www.easycron.com) / [SetCronJob](https://setcronjob.com) 等同类服务
+
+   新建任务，时间填北京时间 **10:05**（比 GitHub 自己的 10:02 稍晚，主次分明），请求配成：
+
+   ```
+   Method:  POST
+   URL:     https://api.github.com/repos/<你的用户名>/<你的仓库名>/actions/workflows/daily.yml/dispatches
+   Headers: Authorization: Bearer <刚建的 PAT>
+            Accept: application/vnd.github+json
+            X-GitHub-Api-Version: 2022-11-28
+   Body:    {"ref":"main"}
+   ```
+
+   改了仓库名/文件名要同步改 URL。想更稳可以再加一条 11:05 的，同样会因当日标记而幂等。
+
+3. **验证**：云端 cron 页面一般有「Run now / 立即执行」按钮，点一下，然后到仓库 Actions 页应出现一条 `workflow_dispatch` 触发的 Daily Paper Radar——有就说明通了。
+
+PAT 只存在那个 cron 服务里，不用进本仓库 Secrets（那是给 Actions 用的，外面的 cron 读不到）。泄露了随时到同一页面撤销重建。
 
 ## 本地试跑
 

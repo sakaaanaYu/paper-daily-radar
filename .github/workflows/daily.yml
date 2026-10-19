@@ -2,11 +2,13 @@ name: Daily Paper Radar
 
 on:
   schedule:
-    # 每天北京时间 10:02（02:02 UTC）；故意避开 :00，减少 GitHub cron 高峰排队
+    # 主触发：北京时间 10:02（02:02 UTC）；故意避开 :00，减少 GitHub cron 高峰排队
     - cron: "2 2 * * *"
-    # 备用：GitHub cron 偶发漏跑/延迟，10:47 再试一次
-    # 若 10:02 已跑过，seen 去重会让本次空跑，不会重复推送
-    - cron: "47 2 * * *"
+    # 备用触发：GitHub cron 偶发漏跑/延迟，一天多点几次名。
+    # seen 里的当日标记 day:YYYY-MM-DD 会让重复触发空跑，不会重复推送。
+    - cron: "47 2 * * *"   # 10:47 北京
+    - cron: "20 4 * * *"   # 12:20 北京
+    - cron: "35 6 * * *"   # 14:35 北京
   workflow_dispatch:
     inputs:
       smoke_llm:
@@ -25,6 +27,12 @@ on:
         description: "调试清库：清空 seen + 删 Zotero 调试条目 + 建日更集合（不推送）"
         type: boolean
         default: false
+
+# 同时触发（GitHub cron + 外部 cron 同刻叫醒）时排队而非并行，
+# 防止两个 run 都还没写当日标记就各自推一遍
+concurrency:
+  group: daily-paper-radar
+  cancel-in-progress: false
 
 permissions:
   contents: write
