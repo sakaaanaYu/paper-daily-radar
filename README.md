@@ -80,16 +80,9 @@ arXiv · OpenReview · 顶刊 RSS · ACM 会议 · OpenAlex 窗口期刊
 
 ### Fork 后第一件事
 
-fork 下来直接跑会踩两个坑，先做掉：
+**手动打开 Actions**——GitHub 会自动禁用 fork 仓库里的 scheduled workflow（防止别人借你的账号白嫖算力）。到 fork 后的仓库 → **Actions** → 提示「I understand my workflows, go ahead and enable them」→ 点启用。不打开的话，`schedule` 和云端 cron 触发的 `workflow_dispatch` 都跑不动。
 
-1. **清掉上游的去重状态**——`data/seen*.json` 里存着几百条已读论文指纹，不清的话你头几天会一直空跑（一篇都不推）：
-
-   ```bash
-   python -m paper_radar.reset        # 清空 data/seen*.json
-   # 或者直接删文件 / 提交一个空数组 [] 进去
-   ```
-
-2. **手动打开 Actions**——GitHub 会自动禁用 fork 仓库里的 scheduled workflow（防止别人借你的账号白嫖算力）。到 fork 后的仓库 → **Actions** → 提示「I understand my workflows, go ahead and enable them」→ 点启用。不打开的话，`schedule` 和云端 cron 触发的 `workflow_dispatch` 都跑不动。
+> 上游仓库的 `data/seen*.json` 是空的（`[]`），fork 下来就是干净起点，不用清状态。
 
 ### 一次性配置
 
@@ -349,7 +342,21 @@ paper_radar/
 - 本项目 MIT 协议，欢迎 fork / PR
 - **密钥只放 GitHub Secrets 或本地 `.env`**（已 gitignore），不要写进 `config.yaml`
 - Secrets 加密存储、日志打码；仓库设为 public **不会**把 Secrets 暴露出去，但 fork 的 Actions **拿不到**你的 Secrets
-- `data/seen*.json` 只是去重状态（含当日已跑标记），不含隐私
+
+### 自己的阅读清单不想公开？请用私有仓跑
+
+这套工具每天会把你**看了什么**写进仓库——`data/seen*.json` 里是论文标题指纹（一眼可还原成标题），`notes/` 里是当天导读加你写的「我的笔记」，Actions 日志还会打印每篇入选论文的标题。**公开仓跑 = 阅读清单公开**。
+
+所以本仓库只做**代码 + 空状态模板**，不含任何阅读记录。你自己日常用请另开一个私有仓：
+
+1. **复制一份**：把本仓库 fork 出来，到 Settings → General → Danger Zone → **Change visibility** → **Private**（或直接新建私有仓 push 代码）
+2. **Secrets / Variables 配在私有仓**（本仓库的不用动，反正不会在这里跑）
+3. **云端 cron 的 URL 改成私有仓**的 `<你的用户名>/<私有仓名>`
+4. 之后状态、笔记、日志都只在私有仓里，公开仓始终是空模板
+
+要同步上游更新时，GitHub 的 **Sync fork** 按钮拉一下即可（`config.yaml` 有冲突就以你私有仓的为准）。
+
+> 连 `config.yaml` 里的源/关键词/板块也会公开——那是**研究方向**不是阅读记录，一般无所谓；很介意的话，公开仓里换成示例配置，真配置只放私有仓。
 
 ## License
 
