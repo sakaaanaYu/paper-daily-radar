@@ -60,7 +60,7 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+          NOTION_PAGE_ID: ${{ secrets.NOTION_PAGE_ID }}
           SMOKE_LLM: ${{ inputs.smoke_llm && '1' || '0' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
@@ -76,7 +76,7 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+          NOTION_PAGE_ID: ${{ secrets.NOTION_PAGE_ID }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
       - name: Commit seen state

@@ -15,11 +15,11 @@ NOTION_VERSION = "2022-06-28"
 
 
 class NotionClient:
-    """把日报写进 Notion：每天一页，论文做成可展开块 + 我的笔记留白。"""
+    """把日报追加到同一篇 Notion 文档末尾：每天一个日期块，顺着往下记。"""
 
-    def __init__(self, api_key: str, parent_page_id: str):
+    def __init__(self, api_key: str, page_id: str):
         self.api_key = api_key
-        self.parent_page_id = parent_page_id
+        self.page_id = page_id
         self._headers = {
             "Authorization": f"Bearer {api_key}",
             "Notion-Version": NOTION_VERSION,
@@ -36,40 +36,38 @@ class NotionClient:
     ) -> bool:
         if not papers:
             return False
-        children = _blocks_for_digest(papers, insight=insight, groups=groups)
-        payload = {
-            "parent": {"page_id": self.parent_page_id},
-            "properties": {"title": [{"text": {"content": f"{title} · {date_str}"}}]},
-            "children": children[:100],  # API 单次上限 100 块
-        }
-        r = requests.post(f"{API}/pages", headers=self._headers, json=payload, timeout=60)
-        if r.status_code >= 400:
-            log.error("Notion 创建页面失败 %s: %s", r.status_code, r.text[:300])
-            return False
-        page_id = r.json().get("id")
-        log.info("Notion 日报页已创建: %s", page_id)
-        # 超出的块分批 append
-        rest = children[100:]
-        while rest:
-            chunk, rest = rest[:100], rest[100:]
-            a = requests.patch(
-                f"{API}/blocks/{page_id}/children",
+        children = _blocks_for_digest(papers, date_str=date_str, title=title, insight=insight, groups=groups)
+        # 同一篇文档往下追加，不是每天新建页
+        for i in range(0, len(children), 100):
+            chunk = children[i : i + 100]
+            r = requests.patch(
+                f"{API}/blocks/{self.page_id}/children",
                 headers=self._headers,
                 json={"children": chunk},
                 timeout=60,
             )
-            if a.status_code >= 400:
-                log.warning("Notion 追加块失败: %s", a.text[:200])
-                break
+            if r.status_code >= 400:
+                log.error("Notion 追加失败 %s: %s", r.status_code, r.text[:300])
+                return False
+        log.info("Notion 已追加 %d 块到同一文档", len(children))
         return True
 
 
-def _blocks_for_digest(papers: list[Paper], insight: str = "", groups: list[dict] | None = None) -> list[dict]:
+def _blocks_for_digest(
+    papers: list[Paper],
+    date_str: str = "",
+    title: str = "",
+    insight: str = "",
+    groups: list[dict] | None = None,
+) -> list[dict]:
     blocks: list[dict] = []
-    if insight:
-        blocks.append(_heading(2, "🧭 今日总结与研究启发"))
-        blocks += _para_blocks(insight)
+    # 每天一个日期分节，接在同一文档末尾
+    if date_str:
+        blocks.append(_heading(2, f"{title} · {date_str}".strip(" ·")))
         blocks.append({"type": "divider", "divider": {}})
+    if insight:
+        blocks.append(_heading(3, "🧭 今日总结与研究启发"))
+        blocks += _para_blocks(insight)
 
     grouped: dict[str, list[Paper]] = {}
     order: list[str] = []
@@ -184,7 +182,8 @@ def notion_enabled() -> bool:
 
 def client_from_env() -> NotionClient | None:
     key = os.environ.get("NOTION_API_KEY") or ""
-    parent = os.environ.get("NOTION_PARENT_PAGE_ID") or ""
-    if not key or not parent:
+    # 写进同一篇文档：这个 id 就是目标页面本身
+    page = os.environ.get("NOTION_PAGE_ID") or os.environ.get("NOTION_PARENT_PAGE_ID") or ""
+    if not key or not page:
         return None
-    return NotionClient(key, parent)
+    return NotionClient(key, page)
