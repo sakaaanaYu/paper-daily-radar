@@ -126,7 +126,15 @@ def run_comm() -> int:
     if not url:
         log.warning("未设置 FEISHU_COMM_WEBHOOK_URL（请单独建 Secret，避免和 AI 雷达混发）")
     if url:
-        send_digest(url, selected, f"{today_s} · 传播", categories=comm_cats, insight=insight)
+        send_digest(
+            url,
+            selected,
+            f"{today_s} · 传播",
+            categories=comm_cats,
+            insight=insight,
+            color="purple",
+            title_prefix="📡 传播精选",
+        )
     else:
         log.info("跳过飞书（缺 FEISHU_COMM_WEBHOOK_URL）")
 

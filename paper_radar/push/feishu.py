@@ -16,8 +16,13 @@ def send_digest(
     date_str: str,
     categories: list[dict] | None = None,
     insight: str = "",
+    color: str = "blue",
+    title_prefix: str = "📚 Paper Radar",
 ) -> bool:
-    """发飞书群机器人日报卡片，按分类分组；insight 为今日总结（可选）。"""
+    """发飞书群机器人日报卡片，按分类分组；insight 为今日总结（可选）。
+
+    color 是飞书卡片头颜色：AI 用 blue，传播用 purple，一眼能分清是哪个机器人。
+    """
     if not webhook_url or not papers:
         return False
 
@@ -68,9 +73,9 @@ def send_digest(
             "header": {
                 "title": {
                     "tag": "plain_text",
-                    "content": f"📚 Paper Radar | {date_str} · 新增 {len(papers)} 篇",
+                    "content": f"{title_prefix} | {date_str} · 新增 {len(papers)} 篇",
                 },
-                "template": "blue",
+                "template": color,
             },
             "elements": elements,
         },

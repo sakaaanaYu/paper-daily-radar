@@ -123,6 +123,8 @@ def main() -> int:
             today,
             categories=cfg["categories"],
             insight=insight,
+            color="blue",
+            title_prefix="📚 Paper Radar",
         )
     else:
         log.warning("未设置 FEISHU_WEBHOOK_URL，跳过飞书推送")
