@@ -303,7 +303,6 @@ tracks:
         webhook_env: FEISHU_COMM_WEBHOOK_URL   # 与 AI 雷达分开的机器人
         color: purple
         title_prefix: "📡 Communication Daily"
-        date_suffix: " · 传播"
       notes:
         kind: comm                  # notes/YYYY-MM-DD-comm.md
         title: "📡 Communication Daily"
