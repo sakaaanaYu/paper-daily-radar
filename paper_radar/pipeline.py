@@ -61,6 +61,8 @@ def run_quota_track(track: dict) -> int:
     seen_path = track["seen_file"]
     seen_list = load_seen(seen_path) if not dry_run else []
     seen = set(seen_list)
+    if _already_ran_today(seen):
+        return 0
 
     # 1. 抓取：sources 里启用的块各抓一批
     papers = _fetch_quota_sources(track.get("sources") or {})
@@ -157,6 +159,8 @@ def run_windows_track(track: dict) -> int:
     seen_path = track["seen_file"]
     seen_list = [] if dry_run else load_seen(seen_path)
     seen = set(seen_list)
+    if _already_ran_today(seen):
+        return 0
 
     src = (track.get("sources") or {}).get("comm_journals") or {}
     journals = src.get("journals") or DEFAULT_JOURNALS
@@ -312,12 +316,32 @@ def _push_all(track: dict, selected: list[Paper], insight: str, groups: list[dic
         log.warning("未设置 ZOTERO_API_KEY，跳过 Zotero")
 
 
+def _day_marker() -> str:
+    """当日已跑标记：写进 seen 后，同一天的第二次运行（备用 cron）直接空跑。
+
+    只对「同一天」生效：明天是新 key，不影响 windows 频道跨天回补挑篇。
+    """
+    return f"day:{date.today().isoformat()}"
+
+
+def _already_ran_today(seen: set[str]) -> bool:
+    marker = _day_marker()
+    if marker in seen:
+        log.info("今日已运行过（%s 在 seen 里），跳过 —— 备用 cron 空跑", marker)
+        return True
+    return False
+
+
 def _mark_seen(path: str, seen_list: list[str], papers: list[Paper], seen: set[str]) -> None:
-    """把论文的多重身份 key 写入 seen，保证跨源、跨天都不重复推送。"""
+    """把论文的多重身份 key 写入 seen，保证跨源、跨天都不重复推送；同时盖当日已跑标记。"""
     new_keys: list[str] = []
     for p in papers:
         for k in identity_keys(p):
             if k not in seen:
                 seen.add(k)
                 new_keys.append(k)
+    marker = _day_marker()
+    if marker not in seen:
+        seen.add(marker)
+        new_keys.append(marker)
     save_seen(path, seen_list + new_keys)
