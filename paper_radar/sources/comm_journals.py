@@ -12,28 +12,39 @@ log = logging.getLogger(__name__)
 API = "https://api.openalex.org/works"
 UA = "paper-radar/1.0 (research digest)"
 
-# 传播学 SSCI Q1 / 中科院 1 区白名单（OpenAlex source id）
+# 传播学刊单：计算传播 / 科技传播为主（OpenAlex source id）
 DEFAULT_JOURNALS = {
+    # 计算传播 · 数字媒体（核心）
+    "Journal of Computer-Mediated Communication": "S30594836",
+    "New Media & Society": "S88603889",
+    "Computational Communication Research": "S4210235366",
+    "Information, Communication & Society": "S70010600",
+    "Digital Journalism": "S2764497610",
+    # 科技传播 · 科学与社会（核心）
+    "Science Communication": "S30803906",
+    "Public Understanding of Science": "S124907306",
+    "Science, Technology & Human Values": "S2181421",
+    # 传播学基础顶刊（回补保质量）
     "Journal of Communication": "S107737141",
     "Communication Research": "S28604305",
-    "Journalism & Mass Communication Quarterly": "S20010350",
-    "Public Opinion Quarterly": "S135539873",
     "Human Communication Research": "S195553305",
-    "New Media & Society": "S88603889",
-    "Journal of Computer-Mediated Communication": "S30594836",
-    "Communication Theory": "S103253184",
-    "Political Communication": "S27211427",
     "Journalism": "S111964278",
-    "Digital Journalism": "S2764497610",
-    "Information, Communication & Society": "S70010600",
 }
 
-# 刊分：四大刊加权更高
+# 刊分：计算传播 / 科技传播优先，基础顶刊次之
 TIER_BONUS = {
+    "Journal of Computer-Mediated Communication": 1.5,
+    "New Media & Society": 1.2,
+    "Science Communication": 1.5,
+    "Public Understanding of Science": 1.2,
+    "Computational Communication Research": 1.2,
+    "Information, Communication & Society": 1.0,
+    "Science, Technology & Human Values": 1.0,
+    "Digital Journalism": 0.8,
     "Journal of Communication": 1.0,
     "Communication Research": 1.0,
-    "Journalism & Mass Communication Quarterly": 1.0,
-    "Public Opinion Quarterly": 1.0,
+    "Human Communication Research": 0.8,
+    "Journalism": 0.5,
 }
 
 

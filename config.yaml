@@ -110,36 +110,60 @@ comm:
   backfill_min_months: 3
   backfill_max_months: 18
   max_per_window: 40
-  # 相关度关键词（影响排序；也可加 AI/平台等）
+  # 相关度关键词：计算传播 + 科技传播口径
   keywords:
+    # 计算传播 / 数字方法
+    - "computational"
+    - "computational social science"
+    - "computational communication"
+    - "digital methods"
+    - "digital trace"
+    - "big data"
+    - "machine learning"
+    - "natural language processing"
+    - "network analysis"
+    - "social network"
+    - "text analysis"
+    - "text-as-data"
+    # 平台与 AI
     - "AI"
     - "artificial intelligence"
     - "algorithm"
     - "large language model"
     - "ChatGPT"
     - "platform"
+    - "automation"
+    - "human-AI"
+    - "recommendation"
+    # 科技传播 / 科学与社会
+    - "science communication"
+    - "public understanding"
+    - "scientific"
+    - "science and technology"
+    - "innovation"
+    - "emerging technology"
+    - "expertise"
     - "misinformation"
     - "disinformation"
     - "social media"
     - "journalism"
-    - "persuasion"
-    - "public opinion"
-    - "human-AI"
-    - "automation"
-  # SSCI Q1 / 中科院 1 区白名单（OpenAlex source id）
+  # 刊单：计算传播 / 科技传播为主（OpenAlex source id）
   journals:
+    # 计算传播 · 数字媒体（核心）
+    "Journal of Computer-Mediated Communication": "S30594836"
+    "New Media & Society": "S88603889"
+    "Computational Communication Research": "S4210235366"
+    "Information, Communication & Society": "S70010600"
+    "Digital Journalism": "S2764497610"
+    # 科技传播 · 科学与社会（核心）
+    "Science Communication": "S30803906"
+    "Public Understanding of Science": "S124907306"
+    "Science, Technology & Human Values": "S2181421"
+    # 传播学基础顶刊（回补保质量）
     "Journal of Communication": "S107737141"
     "Communication Research": "S28604305"
-    "Journalism & Mass Communication Quarterly": "S20010350"
-    "Public Opinion Quarterly": "S135539873"
     "Human Communication Research": "S195553305"
-    "New Media & Society": "S88603889"
-    "Journal of Computer-Mediated Communication": "S30594836"
-    "Communication Theory": "S103253184"
-    "Political Communication": "S27211427"
     "Journalism": "S111964278"
-    "Digital Journalism": "S2764497610"
-    "Information, Communication & Society": "S70010600"
 
 # 分类体系：卡片按此分组，关键词预分类 + LLM 修正
 # id 会出现在 LLM 输出里，不要随意改；label 是卡片/Zotero 上显示的名字
