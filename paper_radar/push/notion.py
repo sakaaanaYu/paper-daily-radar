@@ -180,10 +180,15 @@ def notion_enabled() -> bool:
     return bool(os.environ.get("NOTION_API_KEY") and os.environ.get("NOTION_PARENT_PAGE_ID"))
 
 
-def client_from_env() -> NotionClient | None:
+def client_from_env(kind: str = "ai") -> NotionClient | None:
+    """kind = 'ai' | 'comm'，各写各的 Notion 文档；没配就跳过。"""
     key = os.environ.get("NOTION_API_KEY") or ""
-    # 写进同一篇文档：这个 id 就是目标页面本身
-    page = os.environ.get("NOTION_PAGE_ID") or os.environ.get("NOTION_PARENT_PAGE_ID") or ""
+    page = (
+        os.environ.get(f"NOTION_PAGE_ID_{kind.upper()}")
+        or os.environ.get("NOTION_PAGE_ID")
+        or os.environ.get("NOTION_PARENT_PAGE_ID")
+        or ""
+    )
     if not key or not page:
         return None
     return NotionClient(key, page)

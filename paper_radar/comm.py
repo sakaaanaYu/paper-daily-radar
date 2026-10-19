@@ -148,7 +148,7 @@ def run_comm() -> int:
         insight=insight,
         groups=comm_cats,
     )
-    notion = notion_client_from_env()
+    notion = notion_client_from_env("comm")
     if notion:
         try:
             notion.save_digest(

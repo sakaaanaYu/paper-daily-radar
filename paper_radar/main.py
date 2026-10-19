@@ -140,7 +140,7 @@ def main() -> int:
         insight=insight,
         groups=cfg["categories"],
     )
-    notion = notion_client_from_env()
+    notion = notion_client_from_env("ai")
     if notion:
         try:
             notion.save_digest(
