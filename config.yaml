@@ -213,10 +213,10 @@ tracks:
       feishu:
         webhook_env: FEISHU_WEBHOOK_URL
         color: blue
-        title_prefix: "📚 Paper Radar"
+        title_prefix: "📚 AI Daily"
       notes:
         kind: ai                    # notes/YYYY-MM-DD-ai.md
-        title: "📚 Paper Radar"
+        title: "📚 AI Daily"
       notion:
         kind: ai                    # 读 NOTION_PAGE_ID_AI
       zotero:
@@ -302,11 +302,11 @@ tracks:
       feishu:
         webhook_env: FEISHU_COMM_WEBHOOK_URL   # 与 AI 雷达分开的机器人
         color: purple
-        title_prefix: "📡 传播精选"
+        title_prefix: "📡 Communication Daily"
         date_suffix: " · 传播"
       notes:
         kind: comm                  # notes/YYYY-MM-DD-comm.md
-        title: "📡 传播精选"
+        title: "📡 Communication Daily"
       notion:
         kind: comm                  # 读 NOTION_PAGE_ID_COMM
       zotero:
