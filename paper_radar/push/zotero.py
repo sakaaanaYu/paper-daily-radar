@@ -40,14 +40,14 @@ class ZoteroClient:
         return f"{API}/users/{self.user_id}/items"
 
     def _request(self, method: str, url: str, timeout: int = 30, **kwargs) -> requests.Response:
-        """带 429/428 退避的请求；Zotero 限流时别硬冲。"""
+        """只对 429 限流退避；428 是缺版本号，重试没用。"""
         last = None
         for attempt in range(5):
             last = requests.request(method, url, timeout=timeout, **kwargs)
-            if last.status_code not in (428, 429):
+            if last.status_code != 429:
                 return last
             wait = int(last.headers.get("Retry-After") or (2 ** attempt * 2))
-            log.warning("Zotero 限流 %s，%ss 后重试", last.status_code, wait)
+            log.warning("Zotero 限流 429，%ss 后重试", wait)
             time.sleep(wait)
         return last
 
@@ -85,41 +85,69 @@ class ZoteroClient:
         return key
 
     def clear_tagged(self, tag: str = "Paper Radar") -> int:
-        """删除打了指定标签的顶层条目（及其附件/笔记），返回删除数。
+        """删除打了指定标签的条目，返回删除数。
 
-        用 seen 集合跳过删不掉的条目，避免 start=0 时反复抓同一页死循环。
+        Zotero 支持逗号拼 key 批量删；单条删会在限流下慢到不可用。
         """
-        deleted = 0
-        tried: set[str] = set()
-        for _page in range(50):  # 最多 50 页 × 100，足够清调试库
+        keys: list[str] = []
+        versions: dict[str, str] = {}
+        start = 0
+        for _page in range(50):
             r = self._request(
                 "GET",
                 self._items_url(),
                 headers=self._headers(),
-                params={"tag": tag, "limit": 100},
+                params={"tag": tag, "limit": 100, "start": start},
             )
             r.raise_for_status()
-            items = [
-                it
-                for it in (r.json() or [])
-                if it.get("key") and it["key"] not in tried
-            ]
-            if not items:
+            batch = [it for it in (r.json() or []) if it.get("key")]
+            if not batch:
                 break
-            for it in items:
-                key = it["key"]
-                tried.add(key)
-                try:
-                    d = self._request(
-                        "DELETE", f"{self._items_url()}/{key}", headers=self._headers()
-                    )
-                    if d.status_code in (200, 204):
-                        deleted += 1
-                    else:
-                        log.warning("删除失败 %s: %s", key, d.status_code)
-                except Exception as e:
-                    log.warning("删除失败 %s: %s", key, e)
-                time.sleep(0.2)  # Zotero 写接口限速，留间隔
+            for it in batch:
+                k = it["key"]
+                if k not in keys:
+                    keys.append(k)
+                    versions[k] = str(it.get("version") or "")
+            if len(batch) < 100:
+                break
+            start += len(batch)
+
+        deleted = 0
+        for i in range(0, len(keys), 25):
+            chunk = keys[i : i + 25]
+            try:
+                d = self._request(
+                    "DELETE",
+                    f"{self._items_url()}/{','.join(chunk)}",
+                    headers=self._headers(),
+                )
+                if d.status_code in (200, 204):
+                    deleted += len(chunk)
+                    log.info("批量删除 %d 条 (%d/%d)", len(chunk), min(i + 25, len(keys)), len(keys))
+                else:
+                    log.warning("批量删除失败 %s: %s", d.status_code, d.text[:200])
+                    # 回退单条，带 If-Unmodified-Since-Version（428 的真正解法）
+                    for key in chunk:
+                        try:
+                            hdrs = dict(self._headers())
+                            ver = versions.get(key) or ""
+                            if ver:
+                                hdrs["If-Unmodified-Since-Version"] = ver
+                            one = self._request(
+                                "DELETE", f"{self._items_url()}/{key}", headers=hdrs
+                            )
+                            if one.status_code in (200, 204):
+                                deleted += 1
+                            else:
+                                log.warning("删除失败 %s: %s", key, one.status_code)
+                        except Exception as e:
+                            log.warning("删除失败 %s: %s", key, e)
+                        time.sleep(0.3)
+            except Exception as e:
+                log.warning("批量删除异常: %s", e)
+            time.sleep(1.5)
+        log.info("Zotero 清除标签「%s」条目 %d/%d 条", tag, deleted, len(keys))
+        return deleted
         log.info("Zotero 清除标签「%s」条目 %d 条（尝试 %d）", tag, deleted, len(tried))
         return deleted
 
