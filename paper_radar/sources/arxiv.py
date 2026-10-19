@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 # RSS 是 arXiv 为"每日新文"提供的接口，比 API 限流宽松得多
 RSS_URL = "https://rss.arxiv.org/rss/{cat}"
-UA = "paper-radar/1.0 (research digest; +https://github.com/sakaaanaYu/paper-daily-radar)"
+UA = "paper-radar/1.0 (research digest)"
 
 
 def fetch_arxiv(categories: list[str], max_results: int = 80) -> list[Paper]:

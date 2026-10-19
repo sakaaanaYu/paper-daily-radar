@@ -52,6 +52,21 @@ arXiv · OpenReview · 顶刊 RSS · ACM 会议 · OpenAlex 窗口期刊
 
 `comm` 频道固定两组：📰 新文（近 `fresh_days` 天）+ 📎 回补精选（`backfill_min_months`–`backfill_max_months` 个月前，按质量分挑，避开同作者/同刊撞车）。
 
+## Fork 后第一件事
+
+fork 下来直接跑会踩两个坑，先做掉：
+
+1. **清掉我的去重状态**——`data/seen*.json` 里存着我已经读过的几百条论文指纹，不清的话你头几天会一直空跑（一篇都不推）：
+
+   ```bash
+   python -m paper_radar.reset        # 清空 data/seen*.json
+   # 或者直接删文件 / 提交一个空数组 [] 进去
+   ```
+
+2. **手动打开 Actions**——GitHub 会自动禁用 fork 仓库里的 scheduled workflow（防止别人借你的账号白嫖算力）。到 fork 后的仓库 → **Actions** → 提示「I understand my workflows, go ahead and enable them」→ 点启用。不打开的话，`schedule` 和云端 cron 触发的 `workflow_dispatch` 都跑不动。
+
+然后照下面「一次性配置」配 Secrets，点一次 Run workflow 验证。
+
 ## 一次性配置
 
 ### 1. 飞书机器人（5 分钟）
