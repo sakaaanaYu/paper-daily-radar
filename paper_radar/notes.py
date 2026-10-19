@@ -21,7 +21,11 @@ CATEGORY_LABELS = {
 }
 
 
-def _label(cat: str) -> str:
+def _label(cat: str, groups: list[dict] | None = None) -> str:
+    """优先用 config 里传入的 label（频道可自定义板块名），查不到再回落内置表。"""
+    for g in groups or []:
+        if g.get("id") == cat and g.get("label"):
+            return g["label"]
     return CATEGORY_LABELS.get(cat or "", cat or "其他")
 
 
@@ -72,7 +76,7 @@ def render_markdown(
         items = grouped.get(cat) or []
         if not items:
             continue
-        lines += [f"## {_label(cat)}", ""]
+        lines += [f"## {_label(cat, groups)}", ""]
         for p in items:
             lines += _paper_md(p)
     return "\n".join(lines).rstrip() + "\n"

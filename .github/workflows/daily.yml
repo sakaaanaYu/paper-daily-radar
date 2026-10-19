@@ -4,6 +4,9 @@ on:
   schedule:
     # 每天北京时间 10:02（02:02 UTC）；故意避开 :00，减少 GitHub cron 高峰排队
     - cron: "2 2 * * *"
+    # 备用：GitHub cron 偶发漏跑/延迟，10:47 再试一次
+    # 若 10:02 已跑过，seen 去重会让本次空跑，不会重复推送
+    - cron: "47 2 * * *"
   workflow_dispatch:
     inputs:
       smoke_llm:

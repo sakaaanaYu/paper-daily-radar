@@ -1,185 +1,68 @@
-# Paper Radar 配置 —— 按你的研究兴趣改 keywords 和 venues
+# Paper Radar 配置 —— fork 后改这里就能定制你自己的雷达
+#
+# 每个 track 是一个独立频道（自己的源、关键词、分类、推送）。
+#   - kind: quota   → 板块保底选篇（AI 雷达用）
+#   - kind: windows → 新文 + 回补双窗口（传播学频道用）
+# 删掉一个 track = 关掉那个频道；加一个 track = 多一个频道（CI 里加一行 python -m paper_radar.run --track 名字）。
+# 旧的扁平写法（顶层 arxiv/openreview/journals/comm 等）仍然兼容，见 README。
 
-arxiv:
-  # 关注的 arXiv 分类（AI 顶会主粮 + 可信/HCI）
-  categories:
-    - cs.AI    # 人工智能
-    - cs.LG    # 机器学习
-    - cs.CL    # 计算语言学（LLM/智能体）
-    - cs.HC    # 人机交互
-    - cs.CR    # 密码学与安全（可信AI/隐私侧）
-  max_results: 80
+tracks:
+  ai:
+    kind: quota
+    seen_file: data/seen.json
 
-openreview:
-  # 顶会 venueid。从 openreview.net 会议页 URL 或论文的 venueid 字段抄。
-  # 注意：CHI 不在 OpenReview（用 PCS 系统）；ACL 走 ACL Rolling Review。
-  venues:
-    - "ICLR.cc/2026/Conference"      # 可用
-    - "ICML.cc/2026/Conference"
-    - "ICML.cc/2025/Conference"
-    - "NeurIPS.cc/2026/Conference"   # 放榜后自动有数据
-    - "NeurIPS.cc/2025/Conference"   # 近期已录用
-    - "TMLR"                         # 期刊级，Transactions on ML Research
-  max_per_venue: 40
+    sources:
+      arxiv:
+        # 关注的 arXiv 分类（AI 顶会主粮 + 可信/HCI）
+        categories:
+          - cs.AI    # 人工智能
+          - cs.LG    # 机器学习
+          - cs.CL    # 计算语言学（LLM/智能体）
+          - cs.HC    # 人机交互
+          - cs.CR    # 密码学与安全（可信AI/隐私侧）
+        max_results: 80
 
-# 顶刊 RSS：不限于 arXiv。靠 seen.json 去重。
-journals:
-  "Nature Machine Intelligence": "https://www.nature.com/natmachintell.rss"
-  "Nature Human Behaviour": "https://www.nature.com/nathumbehav.rss"
-  "Science": "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science"
-  "PNAS": "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas"
-  "ACM TOCHI": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=tochi"
-  "PACM HCI (CSCW/IUI)": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=pacmhci"
-max_per_journal: 20
+      openreview:
+        # 顶会 venueid。从 openreview.net 会议页 URL 或论文的 venueid 字段抄。
+        # 注意：CHI 不在 OpenReview（用 PCS 系统）；ACL 走 ACL Rolling Review。
+        venues:
+          - "ICLR.cc/2026/Conference"      # 可用
+          - "ICML.cc/2026/Conference"
+          - "ICML.cc/2025/Conference"
+          - "NeurIPS.cc/2026/Conference"   # 放榜后自动有数据
+          - "NeurIPS.cc/2025/Conference"   # 近期已录用
+          - "TMLR"                         # 期刊级，Transactions on ML Research
+        max_per_venue: 40
 
-# ACM 会议（CHI/UIST 等）不在 OpenReview，走 OpenAlex source id 抓
-# source id 来自 https://api.openalex.org/sources?search=CHI+Conference...
-acm_confs:
-  "CHI": "S4363607743"
-  "UIST": "S7407087746"
-max_per_conf: 25
+      # 顶刊 RSS：不限于 arXiv。靠 seen.json 去重。
+      journals:
+        feeds:
+          "Nature Machine Intelligence": "https://www.nature.com/natmachintell.rss"
+          "Nature Human Behaviour": "https://www.nature.com/nathumbehav.rss"
+          "Science": "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science"
+          "PNAS": "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas"
+          "ACM TOCHI": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=tochi"
+          "PACM HCI (CSCW/IUI)": "https://dl.acm.org/action/showFeed?type=etoc&feed=rss&jc=pacmhci"
+        max_per_journal: 20
 
-# 分类保底：每天每类至少几篇，剩余名额按分数补满（防止某类吃满）
-per_cat_min: 2
+      # ACM 会议（CHI/UIST 等）不在 OpenReview，走 OpenAlex source id 抓
+      # source id 来自 https://api.openalex.org/sources?search=CHI+Conference...
+      acm_confs:
+        venues:
+          "CHI": "S4363607743"
+          "UIST": "S7407087746"
+        max_per_venue: 25
 
-# 关键词：命中标题权重高，命中摘要权重低。留空则不过滤。
-# 覆盖四个板块的宽口径词，用于拓展视野而非贴合单一课题
-keywords:
-  # 可信人工智能
-  - "trustworthy"
-  - "fairness"
-  - "fair "
-  - "bias"
-  - "privacy"
-  - "interpretability"
-  - "explainable"
-  - "transparency"
-  - "accountability"
-  - "safety"
-  - "alignment"
-  - "robustness"
-  - "adversarial"
-  - "governance"
-  - "ethics"
-  # 人机交互
-  - "human-AI"
-  - "human computer interaction"
-  - "HCI"
-  - "user study"
-  - "interaction"
-  - "interface"
-  - "usability"
-  - "human-centered"
-  - "collaboration"
-  - "mixed-initiative"
-  # 语言模型与智能体
-  - "large language model"
-  - "LLM"
-  - "language model"
-  - "foundation model"
-  - "agent"
-  - "GPT"
-  - "transformer"
-  - "prompt"
-  - "reasoning"
-  - "instruction"
-  - "retrieval"
-  # AI4S 应用与科学
-  - "scientific"
-  - "science"
-  - "chemistry"
-  - "physics"
-  - "biology"
-  - "drug discovery"
-  - "materials"
-  - "health"
-  - "medical"
-  - "climate"
-  - "robotics"
-  - "application"
-
-# 每天最多推送/入库的篇数
-max_papers_per_day: 10
-
-# ---- 传播学日更（独立飞书机器人 / 独立 seen_comm.json）----
-comm:
-  max_papers_per_day: 4
-  fresh_count: 2          # 近期新文
-  backfill_count: 2       # 回补精选
-  fresh_days: 30
-  backfill_min_months: 3
-  backfill_max_months: 18
-  max_per_window: 40
-  # 相关度关键词：计算传播 + 科技传播口径
-  keywords:
-    # 计算传播 / 数字方法
-    - "computational"
-    - "computational social science"
-    - "computational communication"
-    - "digital methods"
-    - "digital trace"
-    - "big data"
-    - "machine learning"
-    - "natural language processing"
-    - "network analysis"
-    - "social network"
-    - "text analysis"
-    - "text-as-data"
-    # 平台与 AI
-    - "AI"
-    - "artificial intelligence"
-    - "algorithm"
-    - "large language model"
-    - "ChatGPT"
-    - "platform"
-    - "automation"
-    - "human-AI"
-    - "recommendation"
-    # 科技传播 / 科学与社会
-    - "science communication"
-    - "public understanding"
-    - "scientific"
-    - "science and technology"
-    - "innovation"
-    - "emerging technology"
-    - "expertise"
-    - "misinformation"
-    - "disinformation"
-    - "social media"
-    - "journalism"
-  # 刊单：计算传播 / 科技传播为主（OpenAlex source id）
-  journals:
-    # 计算传播 · 数字媒体（核心）
-    "Journal of Computer-Mediated Communication": "S30594836"
-    "New Media & Society": "S88603889"
-    "Computational Communication Research": "S4210235366"
-    "Information, Communication & Society": "S70010600"
-    "Digital Journalism": "S2764497610"
-    # 科技传播 · 科学与社会（核心）
-    "Science Communication": "S30803906"
-    "Public Understanding of Science": "S124907306"
-    "Science, Technology & Human Values": "S2181421"
-    # 传播学基础顶刊（回补保质量）
-    "Journal of Communication": "S107737141"
-    "Communication Research": "S28604305"
-    "Human Communication Research": "S195553305"
-    "Journalism": "S111964278"
-
-# 分类体系：卡片按此分组，关键词预分类 + LLM 修正
-# id 会出现在 LLM 输出里，不要随意改；label 是卡片/Zotero 上显示的名字
-categories:
-  - id: trust
-    label: "⚖️ 可信人工智能"
+    # 关键词：命中标题权重高，命中摘要权重低。留空则不过滤。
+    # 覆盖四个板块的宽口径词，用于拓展视野而非贴合单一课题
     keywords:
+      # 可信人工智能
       - "trustworthy"
-      - "trust"
       - "fairness"
-      - "fair"
+      - "fair "
       - "bias"
       - "privacy"
-      - "differential privacy"
       - "interpretability"
-      - "interpretable"
       - "explainable"
       - "transparency"
       - "accountability"
@@ -187,75 +70,244 @@ categories:
       - "alignment"
       - "robustness"
       - "adversarial"
-      - "certified"
-      - "audit"
       - "governance"
       - "ethics"
-      - "responsible"
-      - "security"
-      - "jailbreak"
-  - id: hci
-    label: "🧑‍💻 人机交互"
-    keywords:
+      # 人机交互
       - "human-AI"
-      - "human AI"
       - "human computer interaction"
-      - "human-computer interaction"
       - "HCI"
       - "user study"
-      - "user interface"
-      - "interaction design"
+      - "interaction"
+      - "interface"
       - "usability"
       - "human-centered"
-      - "human-in-the-loop"
       - "collaboration"
       - "mixed-initiative"
-      - "cscw"
-      - "participatory"
-      - "accessibility"
-      - "user experience"
-      - "crowdsourcing"
-  - id: llm
-    label: "🗣 语言模型与智能体"
-    keywords:
+      # 语言模型与智能体
       - "large language model"
-      - "large language models"
       - "LLM"
       - "language model"
       - "foundation model"
       - "agent"
-      - "multi-agent"
       - "GPT"
       - "transformer"
       - "prompt"
-      - "in-context"
-      - "instruction tuning"
-      - "RLHF"
       - "reasoning"
-      - "chain-of-thought"
-      - "tool use"
-      - "retrieval-augmented"
-      - "RAG"
-      - "chatbot"
-      - "dialog"
-  - id: ai4s
-    label: "🔬 AI4S应用与科学"
-    keywords:
+      - "instruction"
+      - "retrieval"
+      # AI4S 应用与科学
       - "scientific"
       - "science"
-      - "AI for science"
       - "chemistry"
-      - "molecule"
-      - "drug discovery"
       - "physics"
       - "biology"
-      - "protein"
+      - "drug discovery"
       - "materials"
-      - "climate"
       - "health"
       - "medical"
-      - "clinical"
+      - "climate"
       - "robotics"
-      - "simulation"
-      - "discovery"
       - "application"
+
+    # 分类体系：卡片按此分组，关键词预分类 + LLM 修正
+    # id 会出现在 LLM 输出里，不要随意改；label 是卡片/Zotero/笔记上显示的名字
+    categories:
+      - id: trust
+        label: "⚖️ 可信人工智能"
+        keywords:
+          - "trustworthy"
+          - "trust"
+          - "fairness"
+          - "fair"
+          - "bias"
+          - "privacy"
+          - "differential privacy"
+          - "interpretability"
+          - "interpretable"
+          - "explainable"
+          - "transparency"
+          - "accountability"
+          - "safety"
+          - "alignment"
+          - "robustness"
+          - "adversarial"
+          - "certified"
+          - "audit"
+          - "governance"
+          - "ethics"
+          - "responsible"
+          - "security"
+          - "jailbreak"
+      - id: hci
+        label: "🧑‍💻 人机交互"
+        keywords:
+          - "human-AI"
+          - "human AI"
+          - "human computer interaction"
+          - "human-computer interaction"
+          - "HCI"
+          - "user study"
+          - "user interface"
+          - "interaction design"
+          - "usability"
+          - "human-centered"
+          - "human-in-the-loop"
+          - "collaboration"
+          - "mixed-initiative"
+          - "cscw"
+          - "participatory"
+          - "accessibility"
+          - "user experience"
+          - "crowdsourcing"
+      - id: llm
+        label: "🗣 语言模型与智能体"
+        keywords:
+          - "large language model"
+          - "large language models"
+          - "LLM"
+          - "language model"
+          - "foundation model"
+          - "agent"
+          - "multi-agent"
+          - "GPT"
+          - "transformer"
+          - "prompt"
+          - "in-context"
+          - "instruction tuning"
+          - "RLHF"
+          - "reasoning"
+          - "chain-of-thought"
+          - "tool use"
+          - "retrieval-augmented"
+          - "RAG"
+          - "chatbot"
+          - "dialog"
+      - id: ai4s
+        label: "🔬 AI4S应用与科学"
+        keywords:
+          - "scientific"
+          - "science"
+          - "AI for science"
+          - "chemistry"
+          - "molecule"
+          - "drug discovery"
+          - "physics"
+          - "biology"
+          - "protein"
+          - "materials"
+          - "climate"
+          - "health"
+          - "medical"
+          - "clinical"
+          - "robotics"
+          - "simulation"
+          - "discovery"
+          - "application"
+
+    # 分类保底：每天每类至少几篇，剩余名额按分数补满（防止某类吃满）
+    per_cat_min: 2
+    # 每天最多推送/入库的篇数
+    max_papers_per_day: 10
+
+    push:
+      feishu:
+        webhook_env: FEISHU_WEBHOOK_URL
+        color: blue
+        title_prefix: "📚 Paper Radar"
+      notes:
+        kind: ai                    # notes/YYYY-MM-DD-ai.md
+        title: "📚 Paper Radar"
+      notion:
+        kind: ai                    # 读 NOTION_PAGE_ID_AI
+      zotero:
+        collection: AI-daily
+
+  comm:
+    kind: windows
+    seen_file: data/seen_comm.json
+
+    sources:
+      comm_journals:
+        # 刊单：计算传播 / 科技传播为主（OpenAlex source id）
+        journals:
+          # 计算传播 · 数字媒体（核心）
+          "Journal of Computer-Mediated Communication": "S30594836"
+          "New Media & Society": "S88603889"
+          "Computational Communication Research": "S4210235366"
+          "Information, Communication & Society": "S70010600"
+          "Digital Journalism": "S2764497610"
+          # 科技传播 · 科学与社会（核心）
+          "Science Communication": "S30803906"
+          "Public Understanding of Science": "S124907306"
+          "Science, Technology & Human Values": "S2181421"
+          # 传播学基础顶刊（回补保质量）
+          "Journal of Communication": "S107737141"
+          "Communication Research": "S28604305"
+          "Human Communication Research": "S195553305"
+          "Journalism": "S111964278"
+        fresh_days: 30
+        backfill_min_months: 3
+        backfill_max_months: 18
+        max_per_window: 40
+
+    # 相关度关键词：计算传播 + 科技传播口径
+    keywords:
+      # 计算传播 / 数字方法
+      - "computational"
+      - "computational social science"
+      - "computational communication"
+      - "digital methods"
+      - "digital trace"
+      - "big data"
+      - "machine learning"
+      - "natural language processing"
+      - "network analysis"
+      - "social network"
+      - "text analysis"
+      - "text-as-data"
+      # 平台与 AI
+      - "AI"
+      - "artificial intelligence"
+      - "algorithm"
+      - "large language model"
+      - "ChatGPT"
+      - "platform"
+      - "automation"
+      - "human-AI"
+      - "recommendation"
+      # 科技传播 / 科学与社会
+      - "science communication"
+      - "public understanding"
+      - "scientific"
+      - "science and technology"
+      - "innovation"
+      - "emerging technology"
+      - "expertise"
+      - "misinformation"
+      - "disinformation"
+      - "social media"
+      - "journalism"
+
+    fresh_count: 2          # 近期新文
+    backfill_count: 2       # 回补精选
+
+    # 卡片分组标签（windows 频道固定 fresh/backfill 两组，这里改显示名）
+    groups:
+      - id: fresh
+        label: "📰 新文"
+      - id: backfill
+        label: "📎 回补精选"
+
+    push:
+      feishu:
+        webhook_env: FEISHU_COMM_WEBHOOK_URL   # 与 AI 雷达分开的机器人
+        color: purple
+        title_prefix: "📡 传播精选"
+        date_suffix: " · 传播"
+      notes:
+        kind: comm                  # notes/YYYY-MM-DD-comm.md
+        title: "📡 传播精选"
+      notion:
+        kind: comm                  # 读 NOTION_PAGE_ID_COMM
+      zotero:
+        collection: comm-daily
