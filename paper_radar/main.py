@@ -10,6 +10,7 @@ from .config import load_config
 from .dedupe import dedupe_papers, identity_keys, is_seen
 from .models import Paper
 from .push.feishu import send_digest
+from .push.notion import client_from_env as notion_client_from_env
 from .push.zotero import ZoteroClient
 from .quality import (
     apply_venue_boost,
@@ -25,6 +26,7 @@ from .sources.journals import fetch_journals
 from .sources.openreview import fetch_openreview
 from .store import load_seen, save_seen
 from .summarize import summarize, summarize_daily_insight
+from .notes import save_notes
 
 log = logging.getLogger("paper_radar")
 
@@ -128,6 +130,30 @@ def main() -> int:
         )
     else:
         log.warning("未设置 FEISHU_WEBHOOK_URL，跳过飞书推送")
+
+    # 笔记沉淀：本地 Markdown + 可选 Notion
+    save_notes(
+        selected,
+        today,
+        kind="ai",
+        title="📚 Paper Radar",
+        insight=insight,
+        groups=cfg["categories"],
+    )
+    notion = notion_client_from_env()
+    if notion:
+        try:
+            notion.save_digest(
+                selected,
+                today,
+                title="📚 Paper Radar",
+                insight=insight,
+                groups=cfg["categories"],
+            )
+        except Exception as e:
+            log.error("Notion 写入失败: %s", e)
+    else:
+        log.info("未配置 NOTION_API_KEY / NOTION_PARENT_PAGE_ID，跳过 Notion")
 
     zotero_key = os.environ.get("ZOTERO_API_KEY", "")
     if dry_run:

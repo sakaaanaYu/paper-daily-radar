@@ -59,6 +59,8 @@ jobs:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
           SMOKE_LLM: ${{ inputs.smoke_llm && '1' || '0' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
@@ -73,6 +75,8 @@ jobs:
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
       - name: Commit seen state
@@ -81,6 +85,7 @@ jobs:
           git config user.email "paper-radar-bot@users.noreply.github.com"
           git add data/seen.json 2>/dev/null || true
           git add data/seen_comm.json 2>/dev/null || true
+          git add notes 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "no state change"
           else
