@@ -131,7 +131,7 @@ class ZoteroClient:
             return
         col_key = self.ensure_collection(collection) if collection else ""
         items = [to_item(p, collection_key=col_key) for p in papers]
-        r = requests.post(self._items_url(), headers=self._headers(), json=items, timeout=60)
+        r = self._request("POST", self._items_url(), headers=self._headers(), json=items, timeout=60)
         r.raise_for_status()
         body = r.json()
         if body.get("failed"):
@@ -171,7 +171,7 @@ class ZoteroClient:
         if not parts:
             return
         note = {"itemType": "note", "parentItem": parent_key, "note": "".join(parts)}
-        r = requests.post(self._items_url(), headers=self._headers(), json=[note], timeout=30)
+        r = self._request("POST", self._items_url(), headers=self._headers(), json=[note])
         r.raise_for_status()
 
     def _attach_pdf(self, parent_key: str, pdf_url: str) -> str:
@@ -202,7 +202,7 @@ class ZoteroClient:
             "filename": "fulltext.pdf",
             "contentType": "application/pdf",
         }
-        r = requests.post(self._items_url(), headers=self._headers(), json=[att], timeout=30)
+        r = self._request("POST", self._items_url(), headers=self._headers(), json=[att])
         r.raise_for_status()
         successful = (r.json().get("successful") or {})
         if not successful:
