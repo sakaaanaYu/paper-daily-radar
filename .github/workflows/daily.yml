@@ -77,7 +77,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
       - name: Run comm daily
-        if: ${{ inputs.reset_library != true }}
+        if: ${{ inputs.reset_library != true && inputs.smoke_llm != true }}
         run: python -m paper_radar.comm
         env:
           FEISHU_COMM_WEBHOOK_URL: ${{ secrets.FEISHU_COMM_WEBHOOK_URL }}
