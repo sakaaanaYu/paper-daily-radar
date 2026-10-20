@@ -240,17 +240,20 @@ def _chat_anthropic(system: str, user: str) -> str:
 
 
 def _parse_json_array(text: str) -> list:
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip(), flags=re.M)
-    try:
-        data = json.loads(text)
-        return data if isinstance(data, list) else []
-    except json.JSONDecodeError:
-        m = re.search(r"\[.*\]", text, flags=re.S)
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip(), flags=re.M)
+    candidates = [raw]
+    # 兜底：从第一个 [ 切到最后一个 ]（模型偶尔会在 JSON 前后加说明文字）
+    if not raw.lstrip().startswith("["):
+        m = re.search(r"\[.*\]", raw, flags=re.S)
         if m:
-            try:
-                data = json.loads(m.group(0))
-                return data if isinstance(data, list) else []
-            except json.JSONDecodeError:
-                pass
-    log.warning("摘要输出无法解析为 JSON")
+            candidates.append(m.group(0))
+    for cand in candidates:
+        try:
+            # strict=False：允许字符串里出现未转义的换行/控制符，
+            # 便宜模型写多行 zh_summary 时常见，不放行整批就作废。
+            data = json.loads(cand, strict=False)
+            return data if isinstance(data, list) else []
+        except json.JSONDecodeError:
+            continue
+    log.warning("摘要输出无法解析为 JSON，原文前 400 字：%s", (text or "")[:400])
     return []
