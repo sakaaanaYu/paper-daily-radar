@@ -63,9 +63,11 @@ def _smoke_llm(cfg: dict) -> int:
              os.environ.get("LLM_MODEL", "") or os.environ.get("CLAUDE_MODEL", ""))
     summarize([sample], batch_size=1, categories=track.get("categories"))
     log.info("SMOKE_LLM 结果 quality=%s why_read=%r", sample.quality, sample.why_read)
-    log.info("SMOKE_LLM 导读全文:\n%s", sample.zh_summary or "（空）")
-    if not sample.zh_summary:
-        log.error("SMOKE_LLM 失败：导读为空")
+    log.info("SMOKE_LLM 短导读（飞书）:\n%s", sample.zh_short or "（空）")
+    log.info("SMOKE_LLM 长导读（Notion）:\n%s", sample.zh_summary or "（空）")
+    if not sample.zh_summary or not sample.zh_short:
+        log.error("SMOKE_LLM 失败：长/短导读有空缺 short=%r summary=%r",
+                  bool(sample.zh_short), bool(sample.zh_summary))
         return 1
     log.info("SMOKE_LLM 通过")
     return 0

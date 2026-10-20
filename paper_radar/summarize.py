@@ -25,7 +25,8 @@ PROVIDER_HINTS = """
 BASE_SYSTEM = (
     "你是文献导读助手。根据论文标题和摘要输出严格 JSON 数组，不要输出任何其他文字。\n"
     '每个元素形如: {"id": 原id, "score": 1-5整数, "category": 分类id, '
-    '"zh_summary": "中文导读", "why_read": "一句话看点，不超过40字"}\n'
+    '"zh_summary": "中文长导读", "zh_short": "飞书短导读", '
+    '"why_read": "一句话看点，不超过40字"}\n'
     "\n"
     "导读写给谁看：社科、传播、人机交互背景的研究者，不是计算机科班，看不懂 AI 黑话。\n"
     "目标：他不读原文，也能明白这篇论文干了什么、为什么值得关心。\n"
@@ -37,6 +38,10 @@ BASE_SYSTEM = (
     "**结论**：主要发现是什么；数字要讲清说明了什么，有机制解释就写出来（2–4 句）\n"
     "**亮点**：新在哪、能借鉴什么、边界或局限（2–3 句）\n"
     "四段合计 300–500 字，以讲清楚为准，宁可到 500 字也不要让读者卡住。\n"
+    "\n"
+    "zh_short（发到群里的短版，80–120 字）：2–3 句口语，像在群里向同事推荐——\n"
+    "这篇做了什么、为什么值得点开。不套四段结构，术语不展开（长版里再讲）。\n"
+    "不要和 why_read 重复：why_read 是钩子，zh_short 讲清楚它干了什么。\n"
     "\n"
     "写法要求（比字数更重要）：\n"
     "1. 说人话：像给同事口头讲这篇论文。禁止论文腔，比如「本文提出了一种基于…的方法」。\n"
@@ -140,6 +145,7 @@ def summarize(
                 except (TypeError, ValueError):
                     p.quality = 3
                 p.zh_summary = str(item.get("zh_summary") or "").strip()
+                p.zh_short = str(item.get("zh_short") or "").strip()
                 p.why_read = str(item.get("why_read") or "").strip()
                 # 混合分类：LLM 修正关键词预分类（仅接受合法 id）
                 cat = str(item.get("category") or "").strip().lower()
