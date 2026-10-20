@@ -59,6 +59,7 @@ BASE_SYSTEM = (
     "   例如「攻击成功率 91%，即十次中约九次被劫持」。\n"
     "4. 不硬编：摘要未写清的信息写「摘要未说明」，不要推测。\n"
     "5. 不要复述摘要原文，用严谨的中文重述。\n"
+    "6. 文本里的引用一律用「」，不要用英文双引号，避免破坏 JSON。\n"
     "\n"
     "score 要拉开区分度，不要都给 3：\n"
     "5=顶会顶刊且贡献突出，方法扎实、结论有启发，值得精读\n"
@@ -251,12 +252,12 @@ def _chat_anthropic(system: str, user: str) -> str:
 
 def _parse_json_array(text: str) -> list:
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip(), flags=re.M)
-    candidates = [raw]
+    candidates = [raw, _repair_json(raw)]
     # 兜底：从第一个 [ 切到最后一个 ]（模型偶尔会在 JSON 前后加说明文字）
     if not raw.lstrip().startswith("["):
         m = re.search(r"\[.*\]", raw, flags=re.S)
         if m:
-            candidates.append(m.group(0))
+            candidates.append(_repair_json(m.group(0)))
     for cand in candidates:
         try:
             # strict=False：允许字符串里出现未转义的换行/控制符，
@@ -265,5 +266,54 @@ def _parse_json_array(text: str) -> list:
             return data if isinstance(data, list) else []
         except json.JSONDecodeError:
             continue
-    log.warning("摘要输出无法解析为 JSON，原文前 400 字：%s", (text or "")[:400])
+    log.warning(
+        "摘要输出无法解析为 JSON（len=%d），尾 200 字：%s",
+        len(text or ""),
+        (text or "")[-200:],
+    )
     return []
+
+
+def _repair_json(text: str) -> str:
+    """修复模型 JSON 的常见毛病：字符串值里的裸引号/换行。
+
+    判定规则：字符串内的 " 若后面第一个有效字符是 , } ] : 或结尾，
+    视为字符串结束；否则是内容里的引号，转义掉。裸换行也转义。
+    """
+    out: list[str] = []
+    in_str = False
+    escaped = False
+    n = len(text)
+    for i, ch in enumerate(text):
+        if not in_str:
+            out.append(ch)
+            if ch == '"':
+                in_str = True
+            continue
+        if escaped:
+            out.append(ch)
+            escaped = False
+        elif ch == "\\":
+            out.append(ch)
+            escaped = True
+        elif ch == '"':
+            j = i + 1
+            while j < n and text[j] in " \t\r\n":
+                j += 1
+            nxt = text[j] if j < n else ""
+            if nxt in (",", "}", "]", ":", ""):
+                out.append(ch)
+                in_str = False
+            else:
+                out.append('\\"')
+        elif ch == "\n":
+            out.append("\\n")
+        elif ch == "\r":
+            out.append("\\r")
+        elif ch == "\t":
+            out.append("\\t")
+        elif ord(ch) < 0x20:
+            out.append(f"\\u{ord(ch):04x}")
+        else:
+            out.append(ch)
+    return "".join(out)
