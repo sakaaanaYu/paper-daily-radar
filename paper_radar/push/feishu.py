@@ -46,16 +46,14 @@ def send_digest(
             if p.accepted_at and p.accepted_at.lower() not in venue.lower():
                 venue = f"✅ {_safe(p.accepted_at)}"
 
-            # 群卡片只放短导读：卡片是扫一眼用的，长导读在 Notion / notes 里。
-            # zh_short 缺失时退回截断的长导读，保证卡片不至于空着。
+            # 卡片放四段短导读（zh_short）；长导读在 Notion / notes 里。
+            # 短版缺失时退回长版，四段结构相同，卡片不至于空着。
             parts = [f"**[{_safe(p.title)}]({p.url})**", f"📍 {venue} · {p.date}"]
             if p.why_read:
                 parts.append(f"💡 {_safe(p.why_read)}")
-            body = (p.zh_short or "").strip()
-            if not body and p.zh_summary:
-                body = p.zh_summary[:120] + ("…" if len(p.zh_summary) > 120 else "")
+            body = (p.zh_short or p.zh_summary or "").strip()
             if body:
-                parts.append(_safe(body))
+                parts.append(_safe_multiline(body))
             elif not p.why_read:
                 parts.append("_（导读未生成：配置 LLM_API_KEY 后自动产出）_")
             line = "\n".join(parts)

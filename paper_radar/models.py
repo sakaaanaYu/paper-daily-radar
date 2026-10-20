@@ -21,7 +21,7 @@ class Paper:
     score: float = 0.0  # 关键词相关度
     quality: int = 0  # 1-5 质量分（LLM 生成，0=未评）
     zh_summary: str = ""  # 四段长导读（Notion / notes / Zotero）
-    zh_short: str = ""  # 群消息短导读（飞书卡片）
+    zh_short: str = ""  # 四段短导读（飞书卡片）
     why_read: str = ""
     accepted_at: str = ""  # 录用查证结果，如 "NeurIPS"（空=未查到录用）
     citations: int = 0  # Semantic Scholar 引用数
