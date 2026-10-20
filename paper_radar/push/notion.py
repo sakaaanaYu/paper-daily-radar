@@ -140,16 +140,32 @@ def _paper_children(p: Paper) -> list[dict]:
             )
     if not parts and p.zh_summary:
         kids += _para_blocks(p.zh_summary)
-    kids.append(_para("我的笔记："))
-    kids.append(
-        {
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [{"type": "text", "text": {"content": "　"}, "annotations": {"color": "gray"}}]
-            },
-        }
-    )
+    kids.append(_note_callout())
     return kids[:100]
+
+
+def _note_callout() -> dict:
+    """「我的笔记」做成 callout：高亮一框，一眼能找到写笔记的地方。
+
+    Notion 一次请求只允许嵌两层（toggle > callout 就到底了），callout 里不能再
+    塞子块，所以写作区用换行+灰色占位符落在 callout 正文里；在 Notion 里把光标
+    放进框内即可续写。
+    """
+    return {
+        "type": "callout",
+        "callout": {
+            "rich_text": [
+                {"type": "text", "text": {"content": "我的笔记"}},
+                {
+                    "type": "text",
+                    "text": {"content": "\n　"},
+                    "annotations": {"color": "gray"},
+                },
+            ],
+            "icon": {"type": "emoji", "emoji": "📝"},
+            "color": "gray_background",
+        },
+    }
 
 
 def _split_summary(zh: str) -> dict[str, str]:
