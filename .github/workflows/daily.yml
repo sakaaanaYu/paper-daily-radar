@@ -27,6 +27,10 @@ on:
         description: "调试清库：清空 seen + 删 Zotero 调试条目 + 建日更集合（不推送）"
         type: boolean
         default: false
+      repush_dates:
+        description: "重推历史日报（逗号分隔日期，如 2026-10-19,2026-10-20）：重写导读只推飞书+Notion，不动 seen/Zotero"
+        type: string
+        default: ""
 
 # 同时触发（GitHub cron + 外部 cron 同刻叫醒）时排队而非并行，
 # 防止两个 run 都还没写当日标记就各自推一遍
@@ -59,7 +63,7 @@ jobs:
           ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
 
       - name: Run paper radar
-        if: ${{ inputs.reset_library != true && !(inputs.only_comm == true) }}
+        if: ${{ inputs.reset_library != true && !(inputs.only_comm == true) && inputs.repush_dates == '' }}
         run: python -m paper_radar.main
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
@@ -77,7 +81,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
       - name: Run comm daily
-        if: ${{ inputs.reset_library != true && inputs.smoke_llm != true }}
+        if: ${{ inputs.reset_library != true && inputs.smoke_llm != true && inputs.repush_dates == '' }}
         run: python -m paper_radar.comm
         env:
           FEISHU_COMM_WEBHOOK_URL: ${{ secrets.FEISHU_COMM_WEBHOOK_URL }}
@@ -92,7 +96,23 @@ jobs:
           NOTION_PAGE_ID_COMM: ${{ secrets.NOTION_PAGE_ID_COMM }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
 
+      - name: Re-push historical digests
+        if: ${{ inputs.repush_dates != '' }}
+        run: python -m paper_radar.repush --dates "${{ inputs.repush_dates }}"
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_COMM_WEBHOOK_URL: ${{ secrets.FEISHU_COMM_WEBHOOK_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_PAGE_ID_AI: ${{ secrets.NOTION_PAGE_ID_AI }}
+          NOTION_PAGE_ID_COMM: ${{ secrets.NOTION_PAGE_ID_COMM }}
+
       - name: Commit seen state
+        if: ${{ inputs.repush_dates == '' }}
         run: |
           git config user.name "paper-radar-bot"
           git config user.email "paper-radar-bot@users.noreply.github.com"

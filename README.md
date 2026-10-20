@@ -297,6 +297,7 @@ python -m paper_radar.run --track comm  # 跑任意频道；--all 跑全部
 
 DRY_RUN=1 python -m paper_radar.main    # 干跑：不写 seen/Zotero（需清空 webhook 变量）
 SMOKE_LLM=1 python -m paper_radar.main  # 只测 LLM 导读链路
+python -m paper_radar.repush --dates 2026-10-19 2026-10-20  # 重推历史日报（只飞书+Notion）
 ```
 
 ## 六、排查
@@ -330,6 +331,7 @@ paper_radar/
 ├── classify.py        # 关键词预分类 + 每类保底选篇
 ├── quality.py         # 排除启发、出处查证、星级（刻意不配置化）
 ├── summarize.py       # 可插拔 LLM：中文导读 + 打分（提示词在此）
+├── repush.py          # 重推历史日报：回源补摘要 → 重写导读 → 只推飞书+Notion
 ├── notes.py           # 本地 Markdown 日报（labels 来自 config groups）
 ├── store.py           # seen*.json 已读记录 + 当日已跑标记
 ├── reset.py           # 重置 seen（调试用）
