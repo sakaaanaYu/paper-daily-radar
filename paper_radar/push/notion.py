@@ -15,7 +15,7 @@ NOTION_VERSION = "2022-06-28"
 
 
 class NotionClient:
-    """把日报追加到同一篇 Notion 文档末尾：每天一个日期块，顺着往下记。"""
+    """把日报插到同一篇 Notion 文档最上方：每天一个日期块，打开先见最新。"""
 
     def __init__(self, api_key: str, page_id: str):
         self.api_key = api_key
@@ -37,19 +37,20 @@ class NotionClient:
         if not papers:
             return False
         children = _blocks_for_digest(papers, date_str=date_str, title=title, insight=insight, groups=groups)
-        # 同一篇文档往下追加，不是每天新建页
-        for i in range(0, len(children), 100):
-            chunk = children[i : i + 100]
+        # 同一篇文档置顶插入，不是每天新建页。Notion 一次最多 100 块；
+        # 每次都插到文档开头，所以从后往前分块插，块序才和日报一致。
+        chunks = [children[i : i + 100] for i in range(0, len(children), 100)]
+        for chunk in reversed(chunks):
             r = requests.patch(
                 f"{API}/blocks/{self.page_id}/children",
                 headers=self._headers,
-                json={"children": chunk},
+                json={"children": chunk, "position": {"type": "start"}},
                 timeout=60,
             )
             if r.status_code >= 400:
-                log.error("Notion 追加失败 %s: %s", r.status_code, r.text[:300])
+                log.error("Notion 插入失败 %s: %s", r.status_code, r.text[:300])
                 return False
-        log.info("Notion 已追加 %d 块到同一文档", len(children))
+        log.info("Notion 已置顶插入 %d 块到同一文档", len(children))
         return True
 
 
@@ -61,7 +62,7 @@ def _blocks_for_digest(
     groups: list[dict] | None = None,
 ) -> list[dict]:
     blocks: list[dict] = []
-    # 每天一个日期分节，接在同一文档末尾
+    # 每天一个日期分节，插在文档最上方
     if date_str:
         blocks.append(_heading(2, f"{title} · {date_str}".strip(" ·")))
         blocks.append({"type": "divider", "divider": {}})

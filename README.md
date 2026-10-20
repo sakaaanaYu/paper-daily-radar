@@ -103,7 +103,7 @@ arXiv · OpenReview · 顶刊 RSS · ACM 会议 · OpenAlex 窗口期刊
 3. 复制文档 URL 里那串 32 位 id（`notion.so/你的名字/<这串id>?v=…` 中间那段），填进 `NOTION_PAGE_ID_AI` / `NOTION_PAGE_ID_COMM`
 
 > 只想写一篇文档的话，改设一个 `NOTION_PAGE_ID` 通用回落即可，两个频道都写它。
-> 每天的日报是**追加**到文档末尾，不会覆盖你写的东西。
+> 每天的日报**插到文档最上方**——打开先见最新一期，旧内容自动下移，你写的东西不会被覆盖。
 
 **3. Zotero API**（5 分钟，不用 Zotero 跳过）：<https://www.zotero.org/settings/keys> → **Create new private key** → 勾选 **Allow library access**、**Allow write access to your library**、**Allow write access to file storage**。userID 可不填，程序自动解析。
 
@@ -341,7 +341,7 @@ paper_radar/
 │   └── comm_journals.py  # 窗口期刊（OpenAlex）：新文 + 回补双窗口
 └── push/
     ├── feishu.py      # 飞书卡片（只显示导读，不贴 abstract）
-    ├── notion.py      # Notion 文档追加（NOTION_PAGE_ID_* 按 kind 解析）
+    ├── notion.py      # Notion 文档置顶插入（NOTION_PAGE_ID_* 按 kind 解析）
     └── zotero.py      # 条目 + 笔记 + PDF
 ```
 
