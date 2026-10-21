@@ -1,6 +1,8 @@
 name: Daily Paper Radar
 
 on:
+  # 上游公开仓已把这个 workflow 在 Actions 页 Disable（密钥已撤，不再定时空跑）；
+  # 能力保留在此文件，fork 后 Enable workflow + 配好 secrets 即可定时日更。
   schedule:
     # 主触发：北京时间 10:02（02:02 UTC）；故意避开 :00，减少 GitHub cron 高峰排队
     - cron: "2 2 * * *"
